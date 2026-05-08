@@ -1,6 +1,5 @@
 import streamlit as st
 from openai import OpenAI
-import openai
 
 # 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(
@@ -10,7 +9,6 @@ st.set_page_config(
 )
 
 # 2. LIGAÇÃO À INTELIGÊNCIA (API)
-# No Streamlit Cloud, vais configurar isto em Settings > Secrets
 try:
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 except Exception:
@@ -59,7 +57,7 @@ if submit_button:
     else:
         with st.spinner('A analisar as tuas limitações e a criar o treino mais seguro...'):
             try:
-                # O PROMPT MESTRE (Instruções para a IA)
+                # O PROMPT MESTRE (Com a regra dos vídeos 3D)
                 prompt_sistema = f"""
                 És um Especialista em Fisiologia do Exercício e Reabilitação Física.
                 Cria um treino científico para o aluno {nome}, respeitando estas diretrizes:
@@ -78,12 +76,13 @@ if submit_button:
                 - Resumo da Estratégia (1 frase).
                 - Protocolo de Prevenção (Justifica as trocas por causa da lesão).
                 - Tabela de Treino: Exercício | Séries/Reps | RPE (1-10) | Descanso | Notas Técnicas.
+                - PARA CADA EXERCÍCIO, inclui obrigatoriamente um link clicável no formato Markdown para ver a animação 3D do movimento no YouTube. Exemplo: [🎥 Ver Animação 3D](https://www.youtube.com/results?search_query=NOME+DO+EXERCICIO+3d+animation+anatomy)
                 - Dica Científica final sobre o objetivo.
                 """
 
-                # Chamada à API (Versão mais recente)
+                # Chamada à API (Usando o gpt-4o-mini que é mais rápido e económico)
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini", # Podes usar "gpt-3.5-turbo" se quiseres gastar menos créditos
+                    model="gpt-4o-mini", 
                     messages=[{"role": "system", "content": prompt_sistema}]
                 )
                 
@@ -105,13 +104,14 @@ if submit_button:
             except Exception as e:
                 st.error(f"Ocorreu um erro técnico: {e}")
 
-# 7. SECÇÃO DE SUPORTE E FAQ (Confiança do Cliente)
+# 7. SECÇÃO DE SUPORTE E FAQ (Atualizada com a parte dos vídeos)
 st.markdown("---")
 with st.expander("🤔 Como é que a Studio AI garante a minha segurança?"):
     st.write("""
     **1. Base Científica:** Utilizamos protocolos validados pelas maiores organizações de fitness do mundo.
     **2. Filtro de Lesões:** A IA bloqueia exercícios de risco para a tua condição específica.
-    **3. Supervisão:** Este sistema é uma ferramenta de apoio ao teu Personal Trainer. Na dúvida, pergunta sempre!
+    **3. Execução Visual:** Tens acesso a vídeos 3D para cada exercício, garantindo a tua técnica.
+    **4. Supervisão:** Este sistema é uma ferramenta de apoio. Na dúvida, chama o teu Personal Trainer!
     """)
 
 with st.expander("💡 Dicas para um treino perfeito"):
@@ -119,6 +119,7 @@ with st.expander("💡 Dicas para um treino perfeito"):
     * Sê muito específico na descrição das tuas dores.
     * Mantém o teu nível de experiência atualizado.
     * Respeita o tempo de descanso sugerido na tabela.
+    * Clica em **🎥 Ver Animação 3D** sempre que não conheceres um movimento.
     """)
 
-st.caption("Studio AI © 2024 - Treino de Elite para Todos.")
+st.caption("Studio AI © 2026 - Treino de Elite para Todos.")
