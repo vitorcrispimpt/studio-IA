@@ -83,7 +83,7 @@ if submit_button:
 
                 # Chamada à API (Versão mais recente)
                 response = client.chat.completions.create(
-                    model="gpt-4o", # Podes usar "gpt-3.5-turbo" se quiseres gastar menos créditos
+                    model="gpt-4o-mini", # Podes usar "gpt-3.5-turbo" se quiseres gastar menos créditos
                     messages=[{"role": "system", "content": prompt_sistema}]
                 )
                 
