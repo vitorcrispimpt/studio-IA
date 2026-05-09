@@ -115,59 +115,65 @@ with tab1:
 # ------------------------------------------
 with tab4:
     if not st.session_state.treino_ativo:
-        st.markdown("### 🦍 Gerador de Aulas CrossFit (50 min)")
-        st.write("Cria a programação com transições exatas, opções RX e Scaled, e regras personalizadas.")
+        st.markdown("### 🦍 Gerador de Aulas e Ciclos CrossFit")
+        st.write("Cria desde uma aula única até um Macrociclo de 2 meses com periodização.")
         
         with st.form("perfil_crossfit"):
-            ciclo = st.radio("Duração da Programação:", ["1 Aula Única (Hoje)", "Semana Completa (Segunda a Sábado)"])
+            ciclo = st.selectbox("Duração da Programação:", [
+                "1 Aula Única (Hoje)", 
+                "1 Semana (Microciclo)", 
+                "1 Mês (Mesociclo - 4 Semanas)", 
+                "2 Meses (Macrociclo - 8 Semanas)"
+            ])
             
             foco = st.selectbox("Qual o foco principal?", ["Equilibrado (Mix dos 3)", "Foco em Força (LPO)", "Foco em Ginástica", "Foco em Cardio (Endurance)"])
             equipamento_cf = st.multiselect("Equipamento disponível na Box:", ["Barra Olímpica e Discos", "Caixas (Plyo)", "Kettlebells", "Dumbbells", "Remos/Bikes", "Estrutura (Pull-ups/Toes to Bar)", "Corda de Saltar"], default=["Barra Olímpica e Discos", "Estrutura (Pull-ups/Toes to Bar)", "Caixas (Plyo)"])
             
-            # CAIXA DE REGRAS ESPECÍFICAS
-            regras_extras = st.text_area("Mandar Regras à IA (Opcional):", placeholder="Ex: Sábado é Team WOD. Quinta-feira focar em Ginástica. Não usar Burpees esta semana.")
+            regras_extras = st.text_area("Mandar Regras à IA (Opcional):", placeholder="Ex: Sábado é Team WOD. Semana 4 deve ser Deload. Não usar Burpees esta semana.")
             
             submit_cf = st.form_submit_button("🔥 GERAR PROGRAMAÇÃO")
             
         if submit_cf:
-            mensagem_loading = "A programar a aula..." if ciclo == "1 Aula Única (Hoje)" else "A desenhar o microciclo semanal de 6 dias (pode demorar uns segundos)..."
+            mensagem_loading = "A desenhar a periodização a longo prazo (isto pode demorar 1 a 2 minutos, não feches a App!)..." if "Mês" in ciclo or "Meses" in ciclo else "A programar..."
             with st.spinner(mensagem_loading):
                 
                 regras_string = f"\nREGRAS EXTRAS DO HEAD COACH QUE DEVES OBEDECER: {regras_extras}" if regras_extras else ""
                 
                 if ciclo == "1 Aula Única (Hoje)":
                     prompt_cf = f"""
-                    És um Head Coach de CrossFit (Level 3). Cria UMA aula de grupo de exatos 50 minutos estritamente estruturada.
-                    Foco do dia: {foco}. Equipamento: {', '.join(equipamento_cf)}.
+                    És um Head Coach de CrossFit. Cria UMA aula de grupo de 50 minutos. Foco: {foco}. Equipamento: {', '.join(equipamento_cf)}.
                     {regras_string}
-                    
-                    Usa os termos oficiais do CrossFit (AMRAP, EMOM, For Time, RX, Scaled, Time Cap).
-                    ESTRUTURA OBRIGATÓRIA (Total: 50 min):
-                    1. 🏃‍♂️ **Warm-up (10 min):** Aquecimento Geral + Específico.
-                    2. ⏱️ **Transição (2 min):** Preparação de material.
-                    3. 🏋️‍♂️ **Skill / Strength (15 min):** Progressão técnica ou bloco de força.
-                    4. ⏱️ **Transição (3 min):** Adaptação de cargas (RX vs Scaled).
-                    5. 🔥 **WOD (15 min):** Define o formato e o Time Cap obrigatório.
-                    6. 🧘‍♂️ **Cooldown (5 min):** Alongamentos.
-                    No WOD e na secção de Força, define obrigatoriamente as opções 🏆 RX e 🛡️ Scaled.
-                    """
-                else:
-                    prompt_cf = f"""
-                    És um Head Coach de CrossFit (Level 3/4). Cria uma PROGRAMAÇÃO SEMANAL COMPLETA de Segunda a Sábado (6 dias).
-                    Cada dia corresponde a uma aula de 50 minutos. Foco macro da semana: {foco}. Equipamento disponível: {', '.join(equipamento_cf)}.
-                    {regras_string}
-                    
-                    Garante que a semana faz sentido estruturalmente (não massacrar os mesmos músculos dias seguidos, alternar time domains - curtos e longos).
-                    
-                    Para CADA DIA (Segunda a Sábado), escreve um título com o dia da semana e o estímulo do dia, seguido desta estrutura (Soma 50 min):
+                    ESTRUTURA (Total: 50 min):
                     1. 🏃‍♂️ Warm-up (10 min)
                     2. ⏱️ Transição (2 min)
-                    3. 🏋️‍♂️ Skill/Strength (15 min) - Definir RX e Scaled
+                    3. 🏋️‍♂️ Skill / Strength (15 min)
                     4. ⏱️ Transição (3 min)
-                    5. 🔥 WOD (15 min) - Definir formato, Time Cap, RX e Scaled
+                    5. 🔥 WOD (15 min) - Definir RX e Scaled e Time Cap.
                     6. 🧘‍♂️ Cooldown (5 min)
+                    """
+                elif ciclo == "1 Semana (Microciclo)":
+                    prompt_cf = f"""
+                    És um Head Coach de CrossFit. Cria um MICROCLICLO DE 1 SEMANA (Seg-Sáb). Foco: {foco}. Equipamento: {', '.join(equipamento_cf)}.
+                    {regras_string}
+                    Para cada dia, usa a estrutura de 50 min: Warm-up, Skill/Strength (RX/Scaled), WOD (RX/Scaled/Time Cap), Cooldown e transições. 
+                    Garante variedade de estímulos.
+                    """
+                else:
+                    # Lógica para 1 Mês ou 2 Meses
+                    prompt_cf = f"""
+                    És um Head Coach de CrossFit Especialista em Periodização. Cria uma programação de {ciclo} (Segunda a Sábado).
+                    Foco Geral: {foco}. Equipamento: {', '.join(equipamento_cf)}.
+                    {regras_string}
                     
-                    Sê claro, direto e usa os termos oficiais da modalidade.
+                    PARTE 1: ESTRATÉGIA DE PERIODIZAÇÃO
+                    - Descreve resumidamente o objetivo de cada semana (Ex: Semana 1 - Base/Hipertrofia, Semana 3 - Pico de Carga, Semana 4 - Deload).
+                    
+                    PARTE 2: PROGRAMAÇÃO DIÁRIA
+                    Para a resposta não ficar demasiado extensa, para cada dia de cada semana, vai direto ao "sumo" do treino (assume que os aquecimentos de 10m e cooldowns de 5m são standard da Box).
+                    Estrutura para cada dia:
+                    - **[Semana X - Dia da Semana] (Estímulo)**
+                    - 🏋️‍♂️ **Força/Skill (15 min):** O que fazer (Cargas/Reps para RX e Scaled).
+                    - 🔥 **WOD (15 min):** Formato, Time Cap, Movimentos (RX e Scaled).
                     """
 
                 st.session_state.mensagens = [{"role": "system", "content": prompt_cf}]
@@ -175,11 +181,10 @@ with tab4:
                 st.session_state.mensagens.append({"role": "assistant", "content": response.choices[0].message.content})
                 st.session_state.treino_ativo = True
                 
-                registo_log = "Aula Grupo (1 Dia)" if ciclo == "1 Aula Única (Hoje)" else "Aula Grupo (Semana)"
-                st.session_state.historico_estudio.append({"nome": registo_log, "objetivo": f"CrossFit - {foco}", "hora": datetime.now().strftime("%H:%M")})
+                st.session_state.historico_estudio.append({"nome": "Aula Grupo", "objetivo": f"CrossFit - {ciclo}", "hora": datetime.now().strftime("%H:%M")})
                 st.rerun()
     else:
-        st.success("✅ Programação CrossFit Gerada! Podes pedir ajustes à IA usando a Tab 'Chat PT'.")
+        st.success("✅ Programação Gerada! Podes pedir ajustes à IA usando a Tab 'Chat PT'.")
         for msg in st.session_state.mensagens:
             if msg["role"] == "assistant":
                 st.markdown(msg["content"])
@@ -202,12 +207,12 @@ with tab2:
                 with st.chat_message(msg["role"]):
                     st.markdown(msg["content"])
         
-        pedido = st.chat_input("Ex: Uma máquina está ocupada, ou troca as pull-ups por outro movimento...")
+        pedido = st.chat_input("Ex: Na semana 3, podes trocar os agachamentos por peso morto?")
         if pedido:
             st.session_state.mensagens.append({"role": "user", "content": pedido})
             with st.chat_message("user"): st.markdown(pedido)
             with st.chat_message("assistant"):
-                with st.spinner("A reajustar..."):
+                with st.spinner("A reajustar a programação..."):
                     resposta = client.chat.completions.create(model="gpt-4o-mini", messages=st.session_state.mensagens)
                     novo = resposta.choices[0].message.content
                     st.markdown(novo)
