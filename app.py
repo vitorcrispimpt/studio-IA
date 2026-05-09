@@ -10,38 +10,21 @@ st.set_page_config(page_title="Studio AI - Elite", page_icon="⚡", layout="cent
 
 st.markdown("""
     <style>
-    /* Fundo super claro com um toque de azul gelo para um design limpo */
     .stApp { background-color: #F4F7FB; } 
-    
-    /* Estilo dos Separadores (Tabs) */
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
     .stTabs [data-baseweb="tab"] { font-weight: bold; }
-    
-    /* Títulos em Azul Forte */
     h1, h2, h3 { color: #0033CC !important; }
-    
-    /* Botões em Roxo */
     .stButton>button {
-        background-color: #6A0DAD; /* Roxo */
-        color: #FFFFFF;
-        border-radius: 8px;
-        padding: 12px 24px;
-        border: none;
-        width: 100%;
-        font-weight: bold;
-        transition: 0.3s;
+        background-color: #6A0DAD; color: #FFFFFF; border-radius: 8px;
+        padding: 12px 24px; border: none; width: 100%; font-weight: bold; transition: 0.3s;
     }
-    
-    /* Botões quando passas o rato (Azul Claro) */
     .stButton>button:hover { 
-        background-color: #00BFFF; /* Azul Claro */
-        color: white; 
-        box-shadow: 0px 4px 12px rgba(0, 191, 255, 0.4);
+        background-color: #00BFFF; color: white; box-shadow: 0px 4px 12px rgba(0, 191, 255, 0.4);
     }
     </style>
 """, unsafe_allow_html=True)
 
-# A TUA IMAGEM (Substitui pelo nome do teu logo no GitHub, ex: "logo.png")
+# A TUA IMAGEM
 st.image("https://via.placeholder.com/800x200.png?text=LOG%C3%93TIPO+DO+TEU+EST%C3%9ADIO", use_column_width=True)
 st.markdown("---")
 
@@ -133,7 +116,7 @@ with tab1:
 with tab4:
     if not st.session_state.treino_ativo:
         st.markdown("### 🦍 Gerador de Aulas CrossFit (50 min)")
-        st.write("Cria a programação com transições exatas, opção RX e Scaled.")
+        st.write("Cria a programação com transições exatas, opções RX e Scaled, e regras personalizadas.")
         
         with st.form("perfil_crossfit"):
             ciclo = st.radio("Duração da Programação:", ["1 Aula Única (Hoje)", "Semana Completa (Segunda a Sábado)"])
@@ -141,16 +124,23 @@ with tab4:
             foco = st.selectbox("Qual o foco principal?", ["Equilibrado (Mix dos 3)", "Foco em Força (LPO)", "Foco em Ginástica", "Foco em Cardio (Endurance)"])
             equipamento_cf = st.multiselect("Equipamento disponível na Box:", ["Barra Olímpica e Discos", "Caixas (Plyo)", "Kettlebells", "Dumbbells", "Remos/Bikes", "Estrutura (Pull-ups/Toes to Bar)", "Corda de Saltar"], default=["Barra Olímpica e Discos", "Estrutura (Pull-ups/Toes to Bar)", "Caixas (Plyo)"])
             
+            # CAIXA DE REGRAS ESPECÍFICAS
+            regras_extras = st.text_area("Mandar Regras à IA (Opcional):", placeholder="Ex: Sábado é Team WOD. Quinta-feira focar em Ginástica. Não usar Burpees esta semana.")
+            
             submit_cf = st.form_submit_button("🔥 GERAR PROGRAMAÇÃO")
             
         if submit_cf:
-            mensagem_loading = "A programar a aula e a gerir o cronómetro..." if ciclo == "1 Aula Única (Hoje)" else "A desenhar o microciclo semanal de 6 dias (pode demorar uns segundos)..."
+            mensagem_loading = "A programar a aula..." if ciclo == "1 Aula Única (Hoje)" else "A desenhar o microciclo semanal de 6 dias (pode demorar uns segundos)..."
             with st.spinner(mensagem_loading):
+                
+                regras_string = f"\nREGRAS EXTRAS DO HEAD COACH QUE DEVES OBEDECER: {regras_extras}" if regras_extras else ""
                 
                 if ciclo == "1 Aula Única (Hoje)":
                     prompt_cf = f"""
                     És um Head Coach de CrossFit (Level 3). Cria UMA aula de grupo de exatos 50 minutos estritamente estruturada.
                     Foco do dia: {foco}. Equipamento: {', '.join(equipamento_cf)}.
+                    {regras_string}
+                    
                     Usa os termos oficiais do CrossFit (AMRAP, EMOM, For Time, RX, Scaled, Time Cap).
                     ESTRUTURA OBRIGATÓRIA (Total: 50 min):
                     1. 🏃‍♂️ **Warm-up (10 min):** Aquecimento Geral + Específico.
@@ -165,8 +155,9 @@ with tab4:
                     prompt_cf = f"""
                     És um Head Coach de CrossFit (Level 3/4). Cria uma PROGRAMAÇÃO SEMANAL COMPLETA de Segunda a Sábado (6 dias).
                     Cada dia corresponde a uma aula de 50 minutos. Foco macro da semana: {foco}. Equipamento disponível: {', '.join(equipamento_cf)}.
+                    {regras_string}
                     
-                    Garante que a semana faz sentido estruturalmente (não massacrar os mesmos músculos dias seguidos, alternar estímulos energéticos como dias longos e dias pesados).
+                    Garante que a semana faz sentido estruturalmente (não massacrar os mesmos músculos dias seguidos, alternar time domains - curtos e longos).
                     
                     Para CADA DIA (Segunda a Sábado), escreve um título com o dia da semana e o estímulo do dia, seguido desta estrutura (Soma 50 min):
                     1. 🏃‍♂️ Warm-up (10 min)
@@ -176,7 +167,7 @@ with tab4:
                     5. 🔥 WOD (15 min) - Definir formato, Time Cap, RX e Scaled
                     6. 🧘‍♂️ Cooldown (5 min)
                     
-                    Sê claro, direto e usa os termos oficiais do CrossFit.
+                    Sê claro, direto e usa os termos oficiais da modalidade.
                     """
 
                 st.session_state.mensagens = [{"role": "system", "content": prompt_cf}]
