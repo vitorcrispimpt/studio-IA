@@ -38,7 +38,6 @@ if "treino_ativo" not in st.session_state: st.session_state.treino_ativo = False
 if "historico_estudio" not in st.session_state: st.session_state.historico_estudio = [] 
 if "historico_cargas" not in st.session_state:
     st.session_state.historico_cargas = pd.DataFrame(columns=["Data", "Exercício", "Carga (kg)"])
-# Nova variável para controlar quem é o Coach
 if "is_coach" not in st.session_state: st.session_state.is_coach = False
 
 # ==========================================
@@ -47,7 +46,7 @@ if "is_coach" not in st.session_state: st.session_state.is_coach = False
 try:
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 except Exception:
-    st.error("Erro técnico: Chave API não encontrada.")
+    st.error("Erro técnico: Chave API não encontrada nos Secrets.")
 
 BENCHMARKS = {
     "Nenhum": "Selecione um WOD Clássico para ver a referência...",
@@ -59,7 +58,7 @@ BENCHMARKS = {
 }
 
 # ==========================================
-# 4. A "CÂMARA SECRETA" (SIDEBAR - CONTROLO DE ACESSO)
+# 4. A "CÂMARA SECRETA" (SIDEBAR)
 # ==========================================
 with st.sidebar:
     st.markdown("### 🔐 Acesso Equipa Técnica")
@@ -184,7 +183,7 @@ with tab_ferramentas:
 with tab_coach:
     if st.session_state.is_coach:
         st.markdown("### 🦍 Programação Interna da Box")
-        st.caption("Bem-vindo ao Backoffice. Usa esta ferramenta para gerar as aulas semanais.")
+        st.caption("Gera treinos com a criatividade de Elite de um Programador dos CrossFit Games.")
         
         with st.expander("🏆 Referência: Benchmarks e Hero WODs"):
             selecao_bench = st.selectbox("Consulta rápida de WODs:", list(BENCHMARKS.keys()))
@@ -193,33 +192,53 @@ with tab_coach:
         
         st.markdown("---")
         with st.form("perfil_box"):
-            ciclo = st.selectbox("Duração do Ciclo a Gerar:", ["1 Aula (Hoje)", "1 Semana (Seg-Sáb)", "1 Mês (Periodização)"])
-            foco_box = st.selectbox("Foco Principal:", ["Geral (Equilibrado)", "Força Base (Weightlifting)", "Ginástica", "Endurance (Cardio)"])
-            regras = st.text_area("Regras Específicas do Head Coach (Ex: Sábado é Team WOD, focar em cleans na quarta):")
+            colA, colB = st.columns(2)
+            with colA:
+                ciclo = st.selectbox("Duração:", ["1 Aula (Hoje)", "1 Semana (Seg-Sáb)", "1 Mês (Periodização)"])
+                foco_box = st.selectbox("Foco Principal:", ["Geral (Equilibrado)", "Força Base (Weightlifting)", "Ginástica", "Endurance (Cardio)"])
+            with colB:
+                # O NOVO "TEMPERO" MÁGICO PARA INSPIRAÇÃO
+                estilo_wod = st.selectbox("Nível de Criatividade / Estilo:", [
+                    "🌶️ Inovador & Fora da Caixa (Surpreendente)",
+                    "🔥 Teste Mental / Grit (WODs Cruéis e Pesados)",
+                    "🛠️ Técnico e Tático (Foco na fluidez e pacing)",
+                    "🧱 Clássico e Direto (Couplets e Triplets Simples)"
+                ])
+
+            regras = st.text_area("Regras Específicas do Head Coach (Ex: Sem saltos, inserir complex de barra):")
             
-            if st.form_submit_button("🔥 Gerar Programação da Box"):
-                with st.spinner("A calcular a periodização ótima para os alunos..."):
+            if st.form_submit_button("🔥 Gerar Programação Inspiradora"):
+                with st.spinner("A invocar a mente do Dave Castro para criar algo épico..."):
+                    
+                    # O PROMPT OTIMIZADO PARA INSPIRAÇÃO MÁXIMA
                     prompt = f"""
-                    És Head Coach de uma Box de CrossFit. Cria a programação oficial para o ciclo de: {ciclo}.
-                    Foco da periodização: {foco_box}.
-                    Regras obrigatórias: {regras}.
+                    És o Head Coach de Programação mais criativo e respeitado do mundo do CrossFit.
+                    A tua missão é criar a programação para: {ciclo}.
+                    Foco macro: {foco_box}.
+                    ESTILO PEDIDO: {estilo_wod} -> Incorpora isto profundamente na tua escolha de movimentos e formatos.
+                    Regras obrigatórias do dono da Box: {regras}.
                     
-                    Cada aula diária TEM de ter a estrutura exata de 50 minutos:
-                    - Warm-up (10m)
-                    - Skill/Strength (15m) -> Define cargas RX e Scaled.
-                    - WOD (15m) -> Define RX, Scaled e Time Cap obrigatório.
-                    - Cooldown (5m) + 5m de transições totais.
+                    DIRETRIZES DE CRIATIVIDADE DE ELITE:
+                    1. Foge da monotonia. Pára de usar apenas AMRAPs básicos de 3 movimentos repetitivos.
+                    2. Usa esquemas de repetições interessantes (ex: 21-15-9, 10-9-8...1, Buy-ins, Cash-outs, Death by, E2MOMs mistos, Chipper com quebras obrigatórias).
+                    3. Cruza domínios de tempo (se for semana, alterna dias de Sprint <8m pesados, com dias longos >20m de endurance).
+                    4. Dá nomes aos WODs se te sentires inspirado.
                     
-                    Se for mais que 1 dia, cria um planeamento coeso e que não sobrecarregue os mesmos grupos musculares repetidamente. Usa a terminologia oficial do CrossFit.
+                    ESTRUTURA DIÁRIA INQUEBRÁVEL (50 min total de aula):
+                    - Warm-up Específico (10m) -> Não dês warm-ups genéricos, prepara as articulações para o WOD do dia.
+                    - Skill/Strength (15m) -> Ex: Encontrar 3RM, Complex de LPO, ou EMOM de Ginástica. Cargas RX/Scaled.
+                    - WOD (15m-20m) -> Seja brilhante e desafiador. Define RX, Scaled e Time Cap obrigatório.
+                    - Transições e Cooldown (5m a 10m).
+                    
+                    Escreve com entusiasmo e autoridade de Coach de Elite. Dá o "porquê" (estímulo do treino) antes do WOD.
                     """
                     st.session_state.mensagens = [{"role": "system", "content": prompt}]
                     response = client.chat.completions.create(model="gpt-4o-mini", messages=st.session_state.mensagens)
                     
                     st.session_state.mensagens.append({"role": "assistant", "content": response.choices[0].message.content})
-                    # Mostra a programação imediatamente abaixo do botão
-                    st.markdown("### 📋 Programação Gerada:")
+                    st.markdown("### 📋 A Tua Programação:")
                     st.markdown(response.choices[0].message.content)
                     
     else:
         st.error("🔒 Área Restrita: Uso exclusivo da Equipa Técnica.")
-        st.write("Por favor, abre o menu lateral esquerdo (clica na seta no canto superior esquerdo do ecrã) e insere a **Password do Coach** para aceder ao gerador de programação da Box.")
+        st.write("Por favor, abre o menu lateral esquerdo (clica na seta) e insere a **Password do Coach**.")
