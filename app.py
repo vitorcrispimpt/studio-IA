@@ -133,46 +133,67 @@ with tab1:
 with tab4:
     if not st.session_state.treino_ativo:
         st.markdown("### 🦍 Gerador de Aulas CrossFit (50 min)")
-        st.write("Programação oficial com transições exatas, opção RX e Adaptação Scaled.")
+        st.write("Cria a programação com transições exatas, opção RX e Scaled.")
         
         with st.form("perfil_crossfit"):
-            foco = st.selectbox("Qual o foco da aula de hoje?", ["Equilibrado (Mix dos 3)", "Foco em Força (LPO)", "Foco em Ginástica", "Foco em Cardio (Endurance)"])
-            equipamento_cf = st.multiselect("Equipamento disponível na Box hoje:", ["Barra Olímpica e Discos", "Caixas (Plyo)", "Kettlebells", "Dumbbells", "Remos/Bikes", "Estrutura (Pull-ups/Toes to Bar)", "Corda de Saltar"], default=["Barra Olímpica e Discos", "Estrutura (Pull-ups/Toes to Bar)", "Caixas (Plyo)"])
+            ciclo = st.radio("Duração da Programação:", ["1 Aula Única (Hoje)", "Semana Completa (Segunda a Sábado)"])
             
-            submit_cf = st.form_submit_button("🔥 GERAR WOD & AULA (50 Min)")
+            foco = st.selectbox("Qual o foco principal?", ["Equilibrado (Mix dos 3)", "Foco em Força (LPO)", "Foco em Ginástica", "Foco em Cardio (Endurance)"])
+            equipamento_cf = st.multiselect("Equipamento disponível na Box:", ["Barra Olímpica e Discos", "Caixas (Plyo)", "Kettlebells", "Dumbbells", "Remos/Bikes", "Estrutura (Pull-ups/Toes to Bar)", "Corda de Saltar"], default=["Barra Olímpica e Discos", "Estrutura (Pull-ups/Toes to Bar)", "Caixas (Plyo)"])
+            
+            submit_cf = st.form_submit_button("🔥 GERAR PROGRAMAÇÃO")
             
         if submit_cf:
-            with st.spinner("A programar a aula e a gerir o cronómetro..."):
-                prompt_cf = f"""
-                És um Head Coach de CrossFit (Level 3). Cria uma aula de grupo de exatos 50 minutos estritamente estruturada.
-                Foco do dia: {foco}. Equipamento: {', '.join(equipamento_cf)}.
-                Usa os termos oficiais do CrossFit (AMRAP, EMOM, For Time, RX, Scaled, Time Cap).
+            mensagem_loading = "A programar a aula e a gerir o cronómetro..." if ciclo == "1 Aula Única (Hoje)" else "A desenhar o microciclo semanal de 6 dias (pode demorar uns segundos)..."
+            with st.spinner(mensagem_loading):
                 
-                ESTRUTURA OBRIGATÓRIA COM TRANSIÇÕES (Total: 50 min):
-                1. 🏃‍♂️ **Warm-up (10 min):** Aquecimento Geral + Específico.
-                2. ⏱️ **Transição (2 min):** Preparação de material para a Força/Skill.
-                3. 🏋️‍♂️ **Skill / Strength (15 min):** Progressão técnica ou bloco de força.
-                4. ⏱️ **Transição (3 min):** Adaptação de cargas (RX vs Scaled) e ida à casa de banho.
-                5. 🔥 **WOD (15 min):** Define o formato (ex: AMRAP 15 min), e o Time Cap obrigatório.
-                6. 🧘‍♂️ **Cooldown (5 min):** Alongamentos focados nos grupos musculares usados.
-                
-                No WOD e na secção de Força, define obrigatoriamente:
-                - **🏆 Categoria RX:** Movimentos complexos e pesos pesados sugeridos (ex: 60/40kg).
-                - **🛡️ Categoria Scaled:** Adaptação de segurança (ex: 40/25kg, ou Pull-up com elástico).
-                """
+                if ciclo == "1 Aula Única (Hoje)":
+                    prompt_cf = f"""
+                    És um Head Coach de CrossFit (Level 3). Cria UMA aula de grupo de exatos 50 minutos estritamente estruturada.
+                    Foco do dia: {foco}. Equipamento: {', '.join(equipamento_cf)}.
+                    Usa os termos oficiais do CrossFit (AMRAP, EMOM, For Time, RX, Scaled, Time Cap).
+                    ESTRUTURA OBRIGATÓRIA (Total: 50 min):
+                    1. 🏃‍♂️ **Warm-up (10 min):** Aquecimento Geral + Específico.
+                    2. ⏱️ **Transição (2 min):** Preparação de material.
+                    3. 🏋️‍♂️ **Skill / Strength (15 min):** Progressão técnica ou bloco de força.
+                    4. ⏱️ **Transição (3 min):** Adaptação de cargas (RX vs Scaled).
+                    5. 🔥 **WOD (15 min):** Define o formato e o Time Cap obrigatório.
+                    6. 🧘‍♂️ **Cooldown (5 min):** Alongamentos.
+                    No WOD e na secção de Força, define obrigatoriamente as opções 🏆 RX e 🛡️ Scaled.
+                    """
+                else:
+                    prompt_cf = f"""
+                    És um Head Coach de CrossFit (Level 3/4). Cria uma PROGRAMAÇÃO SEMANAL COMPLETA de Segunda a Sábado (6 dias).
+                    Cada dia corresponde a uma aula de 50 minutos. Foco macro da semana: {foco}. Equipamento disponível: {', '.join(equipamento_cf)}.
+                    
+                    Garante que a semana faz sentido estruturalmente (não massacrar os mesmos músculos dias seguidos, alternar estímulos energéticos como dias longos e dias pesados).
+                    
+                    Para CADA DIA (Segunda a Sábado), escreve um título com o dia da semana e o estímulo do dia, seguido desta estrutura (Soma 50 min):
+                    1. 🏃‍♂️ Warm-up (10 min)
+                    2. ⏱️ Transição (2 min)
+                    3. 🏋️‍♂️ Skill/Strength (15 min) - Definir RX e Scaled
+                    4. ⏱️ Transição (3 min)
+                    5. 🔥 WOD (15 min) - Definir formato, Time Cap, RX e Scaled
+                    6. 🧘‍♂️ Cooldown (5 min)
+                    
+                    Sê claro, direto e usa os termos oficiais do CrossFit.
+                    """
+
                 st.session_state.mensagens = [{"role": "system", "content": prompt_cf}]
                 response = client.chat.completions.create(model="gpt-4o-mini", messages=st.session_state.mensagens)
                 st.session_state.mensagens.append({"role": "assistant", "content": response.choices[0].message.content})
                 st.session_state.treino_ativo = True
-                st.session_state.historico_estudio.append({"nome": "Aula Grupo", "objetivo": f"CrossFit - {foco}", "hora": datetime.now().strftime("%H:%M")})
+                
+                registo_log = "Aula Grupo (1 Dia)" if ciclo == "1 Aula Única (Hoje)" else "Aula Grupo (Semana)"
+                st.session_state.historico_estudio.append({"nome": registo_log, "objetivo": f"CrossFit - {foco}", "hora": datetime.now().strftime("%H:%M")})
                 st.rerun()
     else:
-        st.success("✅ Aula de CrossFit Gerada! Podes pedir para trocar um movimento no 'Chat PT'.")
+        st.success("✅ Programação CrossFit Gerada! Podes pedir ajustes à IA usando a Tab 'Chat PT'.")
         for msg in st.session_state.mensagens:
             if msg["role"] == "assistant":
                 st.markdown(msg["content"])
         st.markdown("---")
-        if st.button("🔄 Terminar e Gerar Nova Aula"):
+        if st.button("🔄 Terminar e Gerar Nova Programação"):
             st.session_state.treino_ativo = False
             st.session_state.mensagens = []
             st.rerun()
