@@ -68,17 +68,16 @@ with st.sidebar:
 # ==========================================
 # 5. SEPARADORES PRINCIPAIS (TABS)
 # ==========================================
-# Agora a aba do Coach está acessível a quem tiver a App
 tab_coach, tab_alunos, tab_chat, tab_ferramentas = st.tabs([
     "🦍 Programação Box", "🏋️ Treino Personalizado", "💬 Chat AI", "🧮 Ferramentas"
 ])
 
 # ------------------------------------------
-# TAB 1: ÁREA DO COACH / CROSSFIT (SEM PASSWORD)
+# TAB 1: ÁREA DO COACH / CROSSFIT
 # ------------------------------------------
 with tab_coach:
     st.markdown("### 🦍 Programação Interna da Box")
-    st.caption("Gera treinos com a criatividade de Elite de um Programador dos CrossFit Games.")
+    st.caption("Gera periodizações precisas com base no histórico anterior.")
     
     with st.expander("🏆 Referência: Benchmarks e Hero WODs"):
         selecao_bench = st.selectbox("Consulta rápida de WODs:", list(BENCHMARKS.keys()))
@@ -89,7 +88,7 @@ with tab_coach:
     with st.form("perfil_box"):
         colA, colB = st.columns(2)
         with colA:
-            ciclo = st.selectbox("Duração:", ["1 Aula (Hoje)", "1 Semana (Seg-Sáb)", "1 Mês (Periodização)"])
+            ciclo = st.selectbox("Duração a Gerar:", ["1 Aula (Hoje)", "1 Semana (Seg-Sáb)", "1 Mês (Periodização)"])
             foco_box = st.selectbox("Foco Principal:", ["Geral (Equilibrado)", "Força Base (Weightlifting)", "Ginástica", "Endurance (Cardio)"])
         with colB:
             estilo_wod = st.selectbox("Estilo do WOD:", [
@@ -99,23 +98,24 @@ with tab_coach:
                 "🧱 Clássico e Direto (Couplets simples)"
             ])
 
-        # A NOVA CAIXA DE MEMÓRIA PARA PERIODIZAÇÃO
-        memoria_anterior = st.text_area("🧠 O que fizeram no Ciclo/Mês anterior? (Para a IA criar progressão):", 
-                                        placeholder="Ex: No mês passado focámos em Front Squats (volume) e kipping pull-ups. Este mês queremos intensidade e Chest-to-bar.")
+        # A NOVA CAIXA PARA COLAR PROGRAMAÇÃO ANTIGA
+        historico_programacao = st.text_area("📋 Cola a Programação do Mês/Ciclo Anterior (Opcional):", 
+                                        placeholder="Cola aqui os treinos da semana/mês passado. A IA vai analisar movimentos, cargas e volumes para não repetir e criar a evolução perfeita!", height=150)
         
         regras = st.text_area("Regras Específicas do Coach (Ex: Sem saltos à corda esta semana):")
         
-        if st.form_submit_button("🔥 Gerar Programação Inspiradora"):
-            with st.spinner("A invocar a mente do Dave Castro para criar a periodização..."):
+        if st.form_submit_button("🔥 Gerar Progressão & Programação"):
+            with st.spinner("A analisar o histórico e a arquitetar o próximo ciclo de treino..."):
                 
-                texto_memoria = f"\nATENÇÃO AO CICLO ANTERIOR: {memoria_anterior}\nCRIA UMA PROGRESSÃO LÓGICA com base nisto." if memoria_anterior else ""
-                texto_regras = f"\nREGRAS OBRIGATÓRIAS: {regras}" if regras else ""
+                texto_historico = f"\n=== HISTÓRICO DO CICLO ANTERIOR ===\nLê e analisa detalhadamente a seguinte programação que os alunos fizeram anteriormente:\n{historico_programacao}\n\nAGORA, CRIA O PRÓXIMO CICLO COM CONTINUIDADE LÓGICA (Garante sobrecarga progressiva, evolução de ginástica e altera os padrões de movimento para evitar overuse).\n===================================" if historico_programacao.strip() else ""
+                texto_regras = f"\nREGRAS OBRIGATÓRIAS: {regras}" if regras.strip() else ""
                 
                 prompt = f"""
-                És o Head Coach de Programação mais criativo e respeitado do mundo do CrossFit.
-                A tua missão é criar a programação para: {ciclo}.
+                És o Head Coach de Programação mais criativo, analítico e respeitado do mundo do CrossFit.
+                A tua missão é desenhar a nova programação para: {ciclo}.
                 Foco macro do ciclo: {foco_box}.
-                ESTILO PEDIDO: {estilo_wod}.{texto_memoria}{texto_regras}
+                ESTILO PEDIDO: {estilo_wod}.
+                {texto_historico}{texto_regras}
                 
                 DIRETRIZES DE CRIATIVIDADE DE ELITE:
                 1. Foge da monotonia. Usa esquemas de repetições interessantes (ex: 21-15-9, ladders, Buy-ins, Cash-outs, Death by, E2MOMs mistos).
@@ -124,11 +124,11 @@ with tab_coach:
                 
                 ESTRUTURA DIÁRIA INQUEBRÁVEL (50 min total de aula):
                 - Warm-up Específico (10m) -> Prepara as articulações para o WOD do dia.
-                - Skill/Strength (15m) -> Ex: Encontrar 3RM, Complex de LPO, ou EMOM de Ginástica. Define cargas RX/Scaled.
+                - Skill/Strength (15m) -> Define progressões de cargas RX/Scaled com base no histórico (se fornecido).
                 - WOD (15m-20m) -> Brilhante e desafiador. Define RX, Scaled e Time Cap obrigatório.
                 - Transições e Cooldown (5m a 10m).
                 
-                Escreve com entusiasmo de Coach de Elite. Dá uma breve justificação ("O Estímulo") para a periodização escolhida logo no início.
+                Escreve com autoridade de Coach. Dá uma breve justificação ("Análise de Progressão") no topo, explicando como este novo ciclo evolui a partir do histórico anterior.
                 """
                 st.session_state.mensagens = [{"role": "system", "content": prompt}]
                 response = client.chat.completions.create(model="gpt-4o-mini", messages=st.session_state.mensagens)
@@ -136,7 +136,6 @@ with tab_coach:
                 st.session_state.mensagens.append({"role": "assistant", "content": response.choices[0].message.content})
                 st.session_state.treino_ativo = True
                 
-                # Registo no log da lateral
                 st.session_state.historico_estudio.append({"nome": "Programação Box", "objetivo": ciclo, "hora": datetime.now().strftime("%H:%M")})
                 st.rerun()
 
