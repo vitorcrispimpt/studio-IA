@@ -80,7 +80,6 @@ if not st.session_state.logged_in:
         
         tab_login, tab_registo = st.tabs(["Entrar", "Criar Conta (Novo Aluno)"])
         
-        # --- SEPARADOR DE LOGIN ---
         with tab_login:
             st.markdown("<h3 style='text-align: center;'>Acesso à Plataforma</h3>", unsafe_allow_html=True)
             u_in = st.text_input("Email / Username").lower().strip()
@@ -100,7 +99,6 @@ if not st.session_state.logged_in:
                     st.error("🚨 Ocorreu um erro ao falar com o Supabase!")
                     st.error(f"DETALHE DO ERRO: {str(e)}")
                     
-        # --- SEPARADOR DE REGISTO AUTÓNOMO ---
         with tab_registo:
             st.markdown("<h3 style='text-align: center;'>Junta-te à Elite</h3>", unsafe_allow_html=True)
             with st.form("form_novo_aluno"):
@@ -116,12 +114,10 @@ if not st.session_state.logged_in:
                 if st.form_submit_button("Criar a Minha Conta"):
                     if n_nome and n_email and n_pwd:
                         try:
-                            # 1. Verifica se o email já existe para evitar duplicados
                             check_res = supabase.table("app_users").select("*").eq("username", n_email).execute()
                             if len(check_res.data) > 0:
                                 st.error("❌ Este email já está registado! Tenta fazer Login.")
                             else:
-                                # 2. Insere o novo aluno no Supabase
                                 supabase.table("app_users").insert({
                                     "username": n_email,
                                     "pwd": n_pwd,
@@ -155,51 +151,114 @@ if st.sidebar.button("Terminar Sessão"):
     st.rerun()
 
 # ==============================================================================
-# 7. MODO COACH 
+# 7. MODO COACH (COM SEPARADORES DIVIDIDOS POR MODALIDADE)
 # ==============================================================================
 if st.session_state.user_data['role'] == 'coach':
-    tab_box, tab_pt, tab_chat, tab_ferramentas = st.tabs([
-        "🦍 Programação Box / Hyrox", "🏋️ Gestão Alunos PT", "💬 Chat Coach AI", "📊 Gestão & Ferramentas"
+    # Novas tabs super organizadas
+    tab_cf, tab_hyrox, tab_run, tab_pt, tab_chat, tab_ferramentas = st.tabs([
+        "🦍 CrossFit", "🎿 Hyrox", "🏃 Corrida", "🏋️ Alunos PT", "💬 Chat Coach", "📊 Ferramentas"
     ])
     
-    with tab_box:
-        st.markdown("### 🦍 Programação de Grupo (CrossFit / Hyrox)")
+    # --- 7.1 CROSSFIT ---
+    with tab_cf:
+        st.markdown("### 🦍 Programação da Box (CrossFit)")
         if not st.session_state.treino_ativo:
             with st.expander("🏆 Ver Benchmarks de Referência"):
-                bench_sel = st.selectbox("Consulta rápida:", list(BENCHMARKS.keys()))
+                bench_sel = st.selectbox("Consulta rápida (CF):", list(BENCHMARKS.keys()), key="bench_cf")
                 if bench_sel != "Nenhum": st.info(f"**{bench_sel}:** {BENCHMARKS[bench_sel]}")
             
-            with st.form("form_box"):
+            with st.form("form_coach_cf"):
                 c1, c2 = st.columns(2)
                 with c1:
-                    ciclo = st.selectbox("Duração:", ["Hoje", "1 Semana", "1 Mês"])
-                    foco = st.selectbox("Foco Principal:", ["Geral", "Força", "Ginástica", "Hyrox", "Endurance"])
+                    ciclo_cf = st.selectbox("Duração:", ["Hoje", "1 Semana", "1 Mês"], key="c_cf")
+                    foco_cf = st.selectbox("Foco Principal:", ["GPP (Geral)", "Weightlifting", "Ginástica Clássica", "Metcon (Motor)"], key="f_cf")
                 with c2:
-                    estilo = st.selectbox("Estilo:", ["Inovador", "Teste Mental", "Técnico", "Clássico"])
+                    estilo_cf = st.selectbox("Estilo:", ["Test & Retest", "Fora da Caixa", "Hero WOD / Grit", "Técnico"], key="e_cf")
                 
-                hist = st.text_area("📋 Histórico Anterior:", placeholder="Ex: Semana passada focámos em Back Squats...")
-                regras = st.text_input("Regras Específicas:", placeholder="Ex: Sem saltos à corda.")
+                hist_cf = st.text_area("📋 Histórico Anterior:", placeholder="Ex: Ontem fizemos Heavy Cleans...")
+                regras_cf = st.text_input("Regras Específicas:")
                 
-                if st.form_submit_button("Gerar Programação de Elite"):
-                    with st.spinner("A periodizar..."):
-                        p_hist = f"Análise do histórico: {hist}." if hist else ""
-                        prompt = f"És Head Coach. Cria {ciclo} de treino. Foco: {foco}. Estilo: {estilo}. {p_hist} Regras: {regras}."
+                if st.form_submit_button("Gerar Programação CrossFit"):
+                    with st.spinner("A periodizar WODs..."):
+                        p_hist = f"Histórico: {hist_cf}." if hist_cf else ""
+                        prompt = f"És Head Coach de CROSSFIT. Cria {ciclo_cf} de treino. Foco: {foco_cf}. Estilo: {estilo_cf}. {p_hist} Regras: {regras_cf}. Inclui Warmup, Skill/Força e WOD (RX e Scaled)."
                         res = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": prompt}])
                         st.session_state.mensagens = [{"role": "assistant", "content": res.choices[0].message.content}]
                         st.session_state.treino_ativo = True
-                        
-                        try:
-                            supabase.table("logs_treino").insert({"username": "coach", "tipo_treino": f"Box {foco}", "plano_gerado": res.choices[0].message.content}).execute()
+                        try: supabase.table("logs_treino").insert({"username": "coach", "tipo_treino": f"CrossFit - {foco_cf}", "plano_gerado": res.choices[0].message.content}).execute()
                         except: pass
                         st.rerun()
         else:
             st.markdown(st.session_state.mensagens[-1]["content"])
-            if st.button("Criar Nova Programação"):
+            if st.button("Limpar / Nova Programação"):
                 st.session_state.treino_ativo = False
                 st.rerun()
 
+    # --- 7.2 HYROX ---
+    with tab_hyrox:
+        st.markdown("### 🎿 Programação Hyrox")
+        if not st.session_state.treino_ativo:
+            with st.form("form_coach_hx"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    ciclo_hx = st.selectbox("Duração:", ["Hoje", "1 Semana", "1 Mês"], key="c_hx")
+                    foco_hx = st.selectbox("Foco Principal:", ["Simulação Completa", "Estações (Sleds/Wallballs/etc)", "Corrida Comprometida", "Motor/Ergs"], key="f_hx")
+                with c2:
+                    estilo_hx = st.selectbox("Estilo:", ["Pacing Base", "Threshold", "Teste de Tempo"], key="e_hx")
+                
+                hist_hx = st.text_area("📋 Histórico Anterior:", placeholder="Ex: O último treino teve muito Sled Push...", key="h_hx")
+                regras_hx = st.text_input("Regras Específicas:", key="r_hx")
+                
+                if st.form_submit_button("Gerar Programação Hyrox"):
+                    with st.spinner("A preparar as estações..."):
+                        p_hist = f"Histórico: {hist_hx}." if hist_hx else ""
+                        prompt = f"És Head Coach de HYROX. Cria {ciclo_hx} de treino. Foco: {foco_hx}. Estilo: {estilo_hx}. {p_hist} Regras: {regras_hx}. Integra o conceito de corrida comprometida."
+                        res = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": prompt}])
+                        st.session_state.mensagens = [{"role": "assistant", "content": res.choices[0].message.content}]
+                        st.session_state.treino_ativo = True
+                        try: supabase.table("logs_treino").insert({"username": "coach", "tipo_treino": f"Hyrox - {foco_hx}", "plano_gerado": res.choices[0].message.content}).execute()
+                        except: pass
+                        st.rerun()
+        else:
+            st.markdown(st.session_state.mensagens[-1]["content"])
+            if st.button("Limpar / Nova Programação", key="btn_limpar_hx"):
+                st.session_state.treino_ativo = False
+                st.rerun()
+
+    # --- 7.3 CORRIDA ---
+    with tab_run:
+        st.markdown("### 🏃 Programação de Corrida / Endurance")
+        if not st.session_state.treino_ativo:
+            with st.form("form_coach_run"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    ciclo_run = st.selectbox("Duração:", ["Hoje", "1 Semana", "1 Mês"], key="c_run")
+                    foco_run = st.selectbox("Foco Principal:", ["Zona 2 (Base Aeróbica)", "Intervalos / VO2 Max", "Tempo Run", "Longo"], key="f_run")
+                with c2:
+                    distancia_alvo = st.selectbox("Distância Alvo:", ["5K", "10K", "Meia Maratona", "Manutenção"], key="d_run")
+                
+                hist_run = st.text_area("📋 Histórico Anterior:", placeholder="Ex: Ontem fizeram 10km em Z2...", key="h_run")
+                regras_run = st.text_input("Regras Específicas:", key="r_run")
+                
+                if st.form_submit_button("Gerar Programação de Corrida"):
+                    with st.spinner("A afinar o pace..."):
+                        p_hist = f"Histórico: {hist_run}." if hist_run else ""
+                        prompt = f"És Head Coach de CORRIDA (Endurance). Cria {ciclo_run} de treino focado em {distancia_alvo}. Foco diário: {foco_run}. {p_hist} Regras: {regras_run}. Inclui paces ou zonas cardíacas claras."
+                        res = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": prompt}])
+                        st.session_state.mensagens = [{"role": "assistant", "content": res.choices[0].message.content}]
+                        st.session_state.treino_ativo = True
+                        try: supabase.table("logs_treino").insert({"username": "coach", "tipo_treino": f"Corrida - {foco_run}", "plano_gerado": res.choices[0].message.content}).execute()
+                        except: pass
+                        st.rerun()
+        else:
+            st.markdown(st.session_state.mensagens[-1]["content"])
+            if st.button("Limpar / Nova Programação", key="btn_limpar_run"):
+                st.session_state.treino_ativo = False
+                st.rerun()
+
+    # --- 7.4 PT PERSONALIZADO ---
     with tab_pt:
-        st.markdown("### 🏋️ Personal Training: Gestão de Microciclos")
+        st.markdown("### 🏋️ Gestão de Alunos Privados (Microciclos)")
         if not st.session_state.treino_ativo:
             try:
                 alunos_res = supabase.table("app_users").select("*").eq("role", "student").execute()
@@ -234,16 +293,16 @@ if st.session_state.user_data['role'] == 'coach':
                         st.session_state.treino_ativo = True
                         
                         if u_f: 
-                            try:
-                                supabase.table("logs_treino").insert({"username": u_f, "tipo_treino": f"PT {split}", "plano_gerado": res.choices[0].message.content}).execute()
+                            try: supabase.table("logs_treino").insert({"username": u_f, "tipo_treino": f"PT {split}", "plano_gerado": res.choices[0].message.content}).execute()
                             except: pass
                         st.rerun()
         else:
             st.markdown(st.session_state.mensagens[-1]["content"])
-            if st.button("Planear Outro Aluno"):
+            if st.button("Planear Outro Aluno", key="btn_pt_limpar"):
                 st.session_state.treino_ativo = False
                 st.rerun()
 
+    # --- 7.5 CHAT COACH ---
     with tab_chat:
         st.markdown("### 💬 Assistente Inteligente do Coach")
         for msg in st.session_state.mensagens:
@@ -257,6 +316,7 @@ if st.session_state.user_data['role'] == 'coach':
             st.session_state.mensagens.append({"role": "assistant", "content": res.choices[0].message.content})
             st.rerun()
 
+    # --- 7.6 FERRAMENTAS ---
     with tab_ferramentas:
         col_f1, col_f2 = st.columns(2)
         with col_f1:
@@ -298,15 +358,16 @@ elif st.session_state.user_data['role'] == 'student':
                     st.session_state.mensagens = [{"role": "assistant", "content": res.choices[0].message.content}]
                     st.session_state.treino_ativo = True
                     
-                    try:
-                        supabase.table("logs_treino").insert({"username": st.session_state.user_data['username'], "tipo_treino": tipo, "foco": detalhe, "plano_gerado": res.choices[0].message.content}).execute()
+                    try: supabase.table("logs_treino").insert({"username": st.session_state.user_data['username'], "tipo_treino": tipo, "foco": detalhe, "plano_gerado": res.choices[0].message.content}).execute()
                     except: pass
                     st.rerun()
         else:
             st.markdown(st.session_state.mensagens[-1]["content"])
+            st.markdown("---")
             if st.button("✅ Treino Concluído!"):
                 st.balloons()
                 st.session_state.treino_ativo = False
+                st.session_state.mensagens = []
                 st.rerun()
 
     with t_al2:
@@ -353,5 +414,4 @@ elif st.session_state.user_data['role'] == 'student':
                     if not df_t.empty: st.table(df_t[['data', 'exercicio', 'carga']].rename(columns={'carga': 'Tempo'}))
             except Exception as e:
                 st.error("Sem dados para mostrar.")
-                    
        
