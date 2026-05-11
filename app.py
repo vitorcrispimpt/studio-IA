@@ -68,7 +68,7 @@ if "treino_ativo" not in st.session_state: st.session_state.treino_ativo = False
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # ==========================================
-# 5. SISTEMA DE LOGIN (COM DETETOR DE ERROS)
+# 5. SISTEMA DE LOGIN E REGISTO B2C
 # ==========================================
 if not st.session_state.logged_in:
     st.image("https://via.placeholder.com/1000x250.png?text=STUDIO+AI+-+SISTEMA+DE+GEST%C3%83O+ELITE", use_column_width=True)
@@ -77,28 +77,66 @@ if not st.session_state.logged_in:
     col_l1, col_l2, col_l3 = st.columns([1, 1.5, 1])
     with col_l2:
         st.markdown('<div class="premium-box">', unsafe_allow_html=True)
-        st.markdown("<h3 style='text-align: center;'>Acesso à Plataforma</h3>", unsafe_allow_html=True)
         
-        u_in = st.text_input("Username").lower().strip()
-        p_in = st.text_input("Password", type="password")
+        tab_login, tab_registo = st.tabs(["Entrar", "Criar Conta (Novo Aluno)"])
         
-        if st.button("Entrar"):
-            try:
-                # O DETETOR ESTÁ AQUI
-                login_res = supabase.table("app_users").select("*").eq("username", u_in).eq("pwd", p_in).execute()
-                
-                if len(login_res.data) > 0:
-                    st.session_state.logged_in = True
-                    st.session_state.user_data = login_res.data[0]
-                    st.rerun()
-                else:
-                    st.error("Credenciais inválidas. Verifica os dados ou a tua subscrição.")
+        # --- SEPARADOR DE LOGIN ---
+        with tab_login:
+            st.markdown("<h3 style='text-align: center;'>Acesso à Plataforma</h3>", unsafe_allow_html=True)
+            u_in = st.text_input("Email / Username").lower().strip()
+            p_in = st.text_input("Password", type="password")
             
-            except Exception as e:
-                # SE EXPLODIR, MOSTRAMOS O MOTIVO EXATO!
-                st.error("🚨 Ocorreu um erro ao falar com o Supabase!")
-                st.error(f"DETALHE DO ERRO: {str(e)}")
+            if st.button("Entrar"):
+                try:
+                    login_res = supabase.table("app_users").select("*").eq("username", u_in).eq("pwd", p_in).execute()
+                    
+                    if len(login_res.data) > 0:
+                        st.session_state.logged_in = True
+                        st.session_state.user_data = login_res.data[0]
+                        st.rerun()
+                    else:
+                        st.error("Credenciais inválidas. Verifica os dados ou a tua subscrição.")
+                except Exception as e:
+                    st.error("🚨 Ocorreu um erro ao falar com o Supabase!")
+                    st.error(f"DETALHE DO ERRO: {str(e)}")
+                    
+        # --- SEPARADOR DE REGISTO AUTÓNOMO ---
+        with tab_registo:
+            st.markdown("<h3 style='text-align: center;'>Junta-te à Elite</h3>", unsafe_allow_html=True)
+            with st.form("form_novo_aluno"):
+                n_nome = st.text_input("Nome Completo")
+                n_email = st.text_input("Email (Será o teu login)").lower().strip()
+                n_pwd = st.text_input("Escolhe uma Password", type="password")
                 
+                st.markdown("**O teu Perfil Desportivo:**")
+                n_obj = st.selectbox("Objetivo Principal:", ["Ganhar Massa Muscular", "Perda de Peso / Secar", "Performance Híbrida (Força + Motor)", "Condicionamento Geral"])
+                n_niv = st.selectbox("Nível de Experiência:", ["Iniciante", "Intermédio", "Avançado"])
+                n_lesoes = st.text_area("Tens alguma lesão ou limitação? (Deixa em branco se estiveres a 100%)")
+                
+                if st.form_submit_button("Criar a Minha Conta"):
+                    if n_nome and n_email and n_pwd:
+                        try:
+                            # 1. Verifica se o email já existe para evitar duplicados
+                            check_res = supabase.table("app_users").select("*").eq("username", n_email).execute()
+                            if len(check_res.data) > 0:
+                                st.error("❌ Este email já está registado! Tenta fazer Login.")
+                            else:
+                                # 2. Insere o novo aluno no Supabase
+                                supabase.table("app_users").insert({
+                                    "username": n_email,
+                                    "pwd": n_pwd,
+                                    "role": "student",
+                                    "name": n_nome,
+                                    "obj": n_obj,
+                                    "nivel": n_niv,
+                                    "lesoes": n_lesoes if n_lesoes else "Nenhuma"
+                                }).execute()
+                                st.success("✅ Conta criada com sucesso! Vai ao separador 'Entrar' e faz o teu Login.")
+                        except Exception as e:
+                            st.error(f"Erro ao criar conta: {str(e)}")
+                    else:
+                        st.warning("⚠️ Por favor, preenche o Nome, Email e Password para criares a conta.")
+
         st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
@@ -315,3 +353,5 @@ elif st.session_state.user_data['role'] == 'student':
                     if not df_t.empty: st.table(df_t[['data', 'exercicio', 'carga']].rename(columns={'carga': 'Tempo'}))
             except Exception as e:
                 st.error("Sem dados para mostrar.")
+                    
+       
