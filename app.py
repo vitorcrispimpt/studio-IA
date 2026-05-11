@@ -112,7 +112,7 @@ if not st.session_state.logged_in:
                 n_pwd = st.text_input("Password", type="password")
                 n_obj = st.selectbox("Objetivo Principal:", ["Ganhar Massa Muscular", "Perda de Peso", "Performance Híbrida", "Condicionamento Geral"])
                 n_niv = st.selectbox("Nível:", ["Iniciante", "Intermédio", "Avançado"])
-                n_les = text_area("Tens alguma lesão ou limitação?")
+                n_les = st.text_area("Tens alguma lesão ou limitação?")
                 if st.form_submit_button("Criar A Minha Conta"):
                     if n_nome and n_email and n_pwd:
                         try:
