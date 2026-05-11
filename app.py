@@ -268,4 +268,4 @@ elif st.session_state.user_data['role'] == 'student':
     with tab_treino:
         st.markdown(f"### Esmaga o dia, {st.session_state.user_data['name'].split()[0]}! 🔥")
         
-        if not st.session_state.treino_ativo
+        if not st.session_state.treino_ativo:
