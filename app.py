@@ -22,21 +22,31 @@ st.markdown("""
     .stTabs [data-baseweb="tab-list"] { gap: 24px; border-bottom: 1px solid #ddd; }
     .stTabs [data-baseweb="tab"] { font-weight: 600; color: #444; padding: 10px 20px; }
     .stTabs [data-baseweb="tab--active"] { color: #000; border-bottom: 2px solid #000; }
+    
     h1, h2, h3 { color: #111 !important; font-family: 'Inter', sans-serif; }
+    
     .stButton>button {
         background-color: #000000; color: #FFFFFF; border-radius: 12px;
         padding: 14px 28px; border: none; width: 100%; font-weight: bold; transition: 0.3s;
     }
-    .stButton>button:hover { background-color: #333333; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.15); }
-    .premium-box { background-color: #FFFFFF; padding: 35px; border-radius: 20px; border: 1px solid #EAEAEA; box-shadow: 0px 10px 40px rgba(0,0,0,0.04); margin-bottom: 25px; }
-    .calc-box { background-color: #FFFFFF; padding: 25px; border-radius: 15px; border: 1px solid #EEE; margin-bottom: 20px; }
+    .stButton>button:hover { 
+        background-color: #333333; box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .premium-box {
+        background-color: #FFFFFF; padding: 35px; border-radius: 20px;
+        border: 1px solid #EAEAEA; box-shadow: 0px 10px 40px rgba(0,0,0,0.04); margin-bottom: 25px;
+    }
+    .calc-box {
+        background-color: #FFFFFF; padding: 25px; border-radius: 15px;
+        border: 1px solid #EEE; margin-bottom: 20px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. METODOLOGIA PROPRIETÁRIA (O CÉREBRO)
+# 3. METODOLOGIA PROPRIETÁRIA & REFERÊNCIAS
 # ==========================================
-METODOLOGIA_CF = """
 METODOLOGIA_CF = """
 === MANIFESTO DO HEAD COACH (STUDIO AI) ===
 És o Head Coach do Studio AI. Deves programar seguindo rigorosamente estas 6 REGRAS DE OURO:
@@ -65,7 +75,6 @@ METODOLOGIA_CF = """
 
 FORMATO DE SAÍDA EXIGIDO:
 Apresentar Warm-up, Parte Principal (se aplicável), WOD (Versões RX e Scaled) e Notas de Pacing para o Coach.
-"""
 """
 
 BENCHMARKS = {
@@ -103,6 +112,7 @@ if not st.session_state.logged_in:
             st.markdown("<h3 style='text-align: center;'>Acesso à Plataforma</h3>", unsafe_allow_html=True)
             u_in = st.text_input("Email / Username").lower().strip()
             p_in = st.text_input("Password", type="password")
+            
             if st.button("Entrar"):
                 try:
                     res = supabase.table("app_users").select("*").eq("username", u_in).eq("pwd", p_in).execute()
@@ -110,41 +120,50 @@ if not st.session_state.logged_in:
                         st.session_state.logged_in = True
                         st.session_state.user_data = res.data[0]
                         st.rerun()
-                    else: st.error("Credenciais inválidas. Verifica os dados.")
-                except Exception as e: st.error(f"Erro de ligação: {e}")
+                    else: st.error("Credenciais inválidas. Verifica os teus dados.")
+                except Exception as e: st.error(f"Erro ao comunicar com a Base de Dados: {e}")
                     
         with tab_registo:
             st.markdown("<h3 style='text-align: center;'>Junta-te à Elite</h3>", unsafe_allow_html=True)
             with st.form("form_novo_aluno"):
                 n_nome = st.text_input("Nome Completo")
                 n_email = st.text_input("Email (Será o teu login)").lower().strip()
-                n_pwd = st.text_input("Password", type="password")
-                n_obj = st.selectbox("Objetivo Principal:", ["Ganhar Massa Muscular", "Perda de Peso", "Performance Híbrida", "Condicionamento Geral"])
-                n_niv = st.selectbox("Nível:", ["Iniciante", "Intermédio", "Avançado"])
-                n_les = st.text_area("Tens alguma lesão ou limitação?")
+                n_pwd = st.text_input("Escolhe uma Password", type="password")
+                
+                st.markdown("**O teu Perfil Desportivo:**")
+                n_obj = st.selectbox("Objetivo Principal:", ["Ganhar Massa Muscular", "Perda de Peso / Secar", "Performance Híbrida (Força + Motor)", "Condicionamento Geral"])
+                n_niv = st.selectbox("Nível de Experiência:", ["Iniciante", "Intermédio", "Avançado"])
+                n_les = st.text_area("Tens alguma lesão ou limitação? (Deixa em branco se estiveres a 100%)")
+                
                 if st.form_submit_button("Criar A Minha Conta"):
                     if n_nome and n_email and n_pwd:
                         try:
                             check_res = supabase.table("app_users").select("*").eq("username", n_email).execute()
                             if len(check_res.data) > 0:
-                                st.error("❌ Este email já está registado!")
+                                st.error("❌ Este email já está registado! Tenta fazer Login.")
                             else:
                                 supabase.table("app_users").insert({
-                                    "username": n_email, "pwd": n_pwd, "role": "student", 
-                                    "name": n_nome, "obj": n_obj, "nivel": n_niv, "lesoes": n_les if n_les else "Nenhuma"
+                                    "username": n_email,
+                                    "pwd": n_pwd,
+                                    "role": "student",
+                                    "name": n_nome,
+                                    "obj": n_obj,
+                                    "nivel": n_niv,
+                                    "lesoes": n_les if n_les else "Nenhuma"
                                 }).execute()
-                                st.success("✅ Conta criada com sucesso! Vai ao separador 'Entrar'.")
-                        except Exception as e: st.error(f"Erro: {e}")
-                    else: st.warning("Preenche Nome, Email e Password.")
+                                st.success("✅ Conta criada com sucesso! Vai ao separador 'Entrar' e faz o teu Login.")
+                        except Exception as e: st.error(f"Erro ao criar conta: {e}")
+                    else: st.warning("⚠️ Por favor, preenche o Nome, Email e Password para criares a conta.")
         st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
 # ==========================================
-# 6. HEADER PRINCIPAL (LOGADO)
+# 6. HEADER PRINCIPAL
 # ==========================================
 st.sidebar.image("https://via.placeholder.com/300x100.png?text=STUDIO+AI", use_container_width=True)
 st.sidebar.markdown(f"### Bem-vindo, {st.session_state.user_data['name']}")
 st.sidebar.markdown(f"**Perfil:** {'Coach Principal' if st.session_state.user_data['role'] == 'coach' else 'Atleta Premium'}")
+
 if st.sidebar.button("Terminar Sessão"):
     st.session_state.logged_in = False
     st.session_state.user_data = {}
@@ -153,45 +172,55 @@ if st.sidebar.button("Terminar Sessão"):
     st.rerun()
 
 # ==============================================================================
-# 7. MODO COACH (PAINÉIS DIVIDIDOS COM TODA A COMPLEXIDADE)
+# 7. MODO COACH (COM TODAS AS FERRAMENTAS INTEGRADAS)
 # ==============================================================================
 if st.session_state.user_data['role'] == 'coach':
-    t_cf, t_hx, t_run, t_pt, t_chat, t_f = st.tabs(["🦍 CrossFit", "🎿 Hyrox", "🏃 Corrida", "🏋️ Alunos PT", "💬 Chat", "📊 Gestão"])
+    tab_cf, tab_hyrox, tab_run, tab_pt, tab_chat, tab_ferramentas = st.tabs([
+        "🦍 CrossFit", "🎿 Hyrox", "🏃 Corrida", "🏋️ Alunos PT", "💬 Chat Coach", "📊 Ferramentas & BD"
+    ])
     
-    # --- CROSSFIT COM MANIFESTO ---
-    with t_cf:
-        st.markdown("### 🦍 Programação Metódica CrossFit")
+    # --- 7.1 CROSSFIT (COM METODOLOGIA) ---
+    with tab_cf:
+        st.markdown("### 🦍 Programação da Box (CrossFit)")
         if not st.session_state.treino_ativo:
-            with st.expander("🏆 Benchmarks de Referência"):
-                bench_sel = st.selectbox("Consulta rápida:", list(BENCHMARKS.keys()), key="bench_cf")
+            with st.expander("🏆 Ver Benchmarks de Referência"):
+                bench_sel = st.selectbox("Consulta rápida (CF):", list(BENCHMARKS.keys()), key="bench_cf")
                 if bench_sel != "Nenhum": st.info(f"**{bench_sel}:** {BENCHMARKS[bench_sel]}")
-
-            with st.form("f_cf"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    modo = st.selectbox("Duração:", ["Hoje", "1 Semana Completa"])
-                    dia = st.selectbox("Dia da Semana (se Hoje):", ["Segunda", "Terça", "Quarta", "Quinta (Partner)", "Sexta", "Sábado (Partner)"])
-                with col2:
-                    foco = st.selectbox("Forçar Foco (opcional):", ["Automático", "Weightlifting", "Ginástica", "WOD Longo", "Skill Técnica"])
+            
+            with st.form("form_coach_cf"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    modo = st.selectbox("O que queres planear?", ["Treino de Hoje", "1 Semana Completa", "1 Mês (Macro)"])
+                    dia_semana = st.selectbox("Se for o Treino de Hoje, que dia é?", ["Segunda", "Terça", "Quarta", "Quinta (Partner)", "Sexta", "Sábado (Partner)"])
+                with c2:
+                    foco_manual = st.selectbox("Forçar Foco (opcional):", ["Automático", "Weightlifting", "Ginástica Clássica", "WOD Longo", "Skill Técnica"])
                 
-                hist = st.text_area("📋 Histórico/Notas do Coach (Ex: Ontem houve muitos pull-ups, evitar braços hoje):")
-                if st.form_submit_button("Gerar Programação"):
-                    with st.spinner("A aplicar o Manifesto do Coach..."):
-                        prompt = f"{METODOLOGIA_CF}\n\nPEDIDO ATUAL: Planeamento para {modo}. Dia: {dia}. Foco: {foco}.\nNOTAS DO HISTÓRICO: {hist}."
+                hist_cf = st.text_area("📋 Histórico Anterior / Notas:", placeholder="Ex: Ontem fizemos Heavy Cleans. Evitar padrão de puxada pesada hoje.")
+                regras_cf = st.text_input("Regras Extras / Avisos:")
+                
+                if st.form_submit_button("Gerar Programação Metódica"):
+                    with st.spinner("A aplicar o Manifesto Studio AI..."):
+                        p_hist = f"Histórico: {hist_cf}." if hist_cf else ""
+                        prompt = f"""
+                        {METODOLOGIA_CF}
+                        PEDIDO ATUAL: {modo}. Dia: {dia_semana}. Foco pedido: {foco_manual}.
+                        {p_hist} Regras extras: {regras_cf}.
+                        Gera o plano seguindo estritamente as regras acima.
+                        """
                         res = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": prompt}])
                         st.session_state.mensagens = [{"role": "assistant", "content": res.choices[0].message.content}]
                         st.session_state.treino_ativo = True
-                        try: supabase.table("logs_treino").insert({"username": "coach", "tipo_treino": f"CrossFit - {foco}", "plano_gerado": res.choices[0].message.content}).execute()
+                        try: supabase.table("logs_treino").insert({"username": "coach", "tipo_treino": f"CrossFit - {modo}", "plano_gerado": res.choices[0].message.content}).execute()
                         except: pass
                         st.rerun()
         else:
             st.markdown(st.session_state.mensagens[-1]["content"])
-            if st.button("Nova Programação CF"):
+            if st.button("Limpar / Nova Programação"):
                 st.session_state.treino_ativo = False
                 st.rerun()
 
-    # --- HYROX AVANÇADO ---
-    with t_hx:
+    # --- 7.2 HYROX ---
+    with tab_hyrox:
         st.markdown("### 🎿 Programação Hyrox")
         if not st.session_state.treino_ativo:
             with st.form("form_coach_hx"):
@@ -221,8 +250,8 @@ if st.session_state.user_data['role'] == 'coach':
                 st.session_state.treino_ativo = False
                 st.rerun()
 
-    # --- CORRIDA AVANÇADA ---
-    with t_run:
+    # --- 7.3 CORRIDA ---
+    with tab_run:
         st.markdown("### 🏃 Programação de Corrida / Endurance")
         if not st.session_state.treino_ativo:
             with st.form("form_coach_run"):
@@ -252,9 +281,9 @@ if st.session_state.user_data['role'] == 'coach':
                 st.session_state.treino_ativo = False
                 st.rerun()
 
-    # --- GESTÃO PT COM INTEGRAÇÃO BD ---
-    with t_pt:
-        st.markdown("### 🏋️ Personal Training: Gestão de Microciclos")
+    # --- 7.4 PT PERSONALIZADO ---
+    with tab_pt:
+        st.markdown("### 🏋️ Gestão de Alunos Privados (Microciclos)")
         if not st.session_state.treino_ativo:
             try:
                 alunos_res = supabase.table("app_users").select("*").eq("role", "student").execute()
@@ -273,17 +302,17 @@ if st.session_state.user_data['role'] == 'coach':
 
                 c_pt1, c_pt2 = st.columns(2)
                 with c_pt1:
-                    objetivo = st.text_input("Objetivo:", value=obj_f)
-                    split = st.selectbox("Split Semanal:", ["1 Treino", "3x Fullbody", "4x Upper/Lower", "Atleta Híbrido"])
+                    objetivo = st.text_input("Objetivo do Aluno:", value=obj_f)
+                    split = st.selectbox("Split Semanal:", ["1 Treino Isolado", "3x Fullbody", "4x Upper/Lower", "Atleta Híbrido (Força + Corrida)"])
                 with c_pt2:
                     nivel = st.selectbox("Nível:", ["Iniciante", "Intermédio", "Avançado"], index=1)
-                    duracao = st.slider("Minutos:", 30, 90, 60)
+                    duracao = st.slider("Minutos disponíveis:", 30, 90, 60)
                 
-                lesoes_pt = st.text_area("Restrições:", value=les_f)
+                lesoes_pt = st.text_area("Restrições / Lesões:", value=les_f)
                 
                 if st.form_submit_button("Gerar Microciclo (Formato WhatsApp)"):
-                    with st.spinner("A desenhar plano..."):
-                        prompt = f"És PT. Aluno: {aluno_sel}. Objetivo: {objetivo}. Nível: {nivel}. Split: {split}. Duração: {duracao}m. Lesões: {lesoes_pt}. Formato: Pronto para enviar no WhatsApp com Emojis."
+                    with st.spinner("A desenhar plano adaptado..."):
+                        prompt = f"És PT. Aluno: {aluno_sel}. Objetivo: {objetivo}. Nível: {nivel}. Split: {split}. Duração: {duracao}m. Lesões: {lesoes_pt}. Formato: Pronto para copiar e colar no WhatsApp com Emojis."
                         res = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": prompt}])
                         st.session_state.mensagens = [{"role": "assistant", "content": res.choices[0].message.content}]
                         st.session_state.treino_ativo = True
@@ -298,22 +327,22 @@ if st.session_state.user_data['role'] == 'coach':
                 st.session_state.treino_ativo = False
                 st.rerun()
 
-    # --- CHAT COACH ---
-    with t_chat:
+    # --- 7.5 CHAT COACH ---
+    with tab_chat:
         st.markdown("### 💬 Assistente Inteligente do Coach")
         for msg in st.session_state.mensagens:
             if msg["role"] != "system":
                 with st.chat_message(msg["role"]): st.markdown(msg["content"])
         
-        c_in = st.chat_input("Pede ajustes na programação ou dicas técnicas...")
+        c_in = st.chat_input("Pede ajustes na programação, pede alternativas para exercícios ou tira dúvidas...")
         if c_in:
             st.session_state.mensagens.append({"role": "user", "content": c_in})
             res = client.chat.completions.create(model="gpt-4o-mini", messages=st.session_state.mensagens)
             st.session_state.mensagens.append({"role": "assistant", "content": res.choices[0].message.content})
             st.rerun()
 
-    # --- FERRAMENTAS E BD ---
-    with t_f:
+    # --- 7.6 FERRAMENTAS E BD ---
+    with tab_ferramentas:
         col_f1, col_f2 = st.columns(2)
         with col_f1:
             st.markdown("#### 🧮 Calculadora 1RM")
@@ -328,10 +357,10 @@ if st.session_state.user_data['role'] == 'coach':
                 all_u = supabase.table("app_users").select("name, username, obj, nivel").eq("role", "student").execute()
                 if all_u.data: st.dataframe(pd.DataFrame(all_u.data), use_container_width=True)
             except Exception as e:
-                st.error("Erro a carregar alunos. Verifica a BD.")
+                st.error("Erro a carregar alunos. Verifica a base de dados.")
 
 # ==============================================================================
-# 8. MODO ALUNO (EXPERIÊNCIA COMPLETA PREMIUM)
+# 8. MODO ALUNO (B2C PREMIUM EXPERIENCE)
 # ==============================================================================
 elif st.session_state.user_data['role'] == 'student':
     t_al1, t_al2, t_al3 = st.tabs(["⚡ Treinar Agora", "💬 Coach AI", "📈 O Meu Diário"])
