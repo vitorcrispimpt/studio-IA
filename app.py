@@ -1,10 +1,18 @@
 import streamlit as st
 from openai import OpenAI
+from supabase import create_client, Client
 from datetime import datetime
 import pandas as pd
 
 # ==========================================
-# 1. CONFIGURAÇÃO PREMIUM & UI
+# 1. LIGAÇÃO AO COFRE (SUPABASE)
+# ==========================================
+url: str = st.secrets["SUPABASE_URL"]
+key: str = st.secrets["SUPABASE_KEY"]
+supabase: Client = create_client(url, key)
+
+# ==========================================
+# 2. CONFIGURAÇÃO PREMIUM & UI
 # ==========================================
 st.set_page_config(page_title="Studio AI - Elite", page_icon="⚡", layout="wide")
 
@@ -33,15 +41,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# 2. BASE DE DADOS SIMULADA
-# ==========================================
-USERS_DB = {
-    "coach": {"pwd": "admin", "role": "coach", "name": "Head Coach", "obj": "", "nivel": "", "lesoes": ""},
-    "joao": {"pwd": "123", "role": "student", "name": "João Silva", "obj": "Massa Muscular", "nivel": "Intermédio", "lesoes": "Dor no ombro direito"},
-    "maria": {"pwd": "abc", "role": "student", "name": "Maria Santos", "obj": "Performance Híbrida", "nivel": "Iniciante", "lesoes": "Nenhuma"}
-}
-
 BENCHMARKS = {
     "Nenhum": "Selecione um Teste para ver a referência...",
     "Fran (CrossFit)": "21-15-9 reps: Thrusters (43/30kg) and Pull-ups.",
@@ -55,28 +54,21 @@ BENCHMARKS = {
 # 3. MEMÓRIA DE SESSÃO
 # ==========================================
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
-if "username" not in st.session_state: st.session_state.username = ""
-if "role" not in st.session_state: st.session_state.role = ""
 if "user_data" not in st.session_state: st.session_state.user_data = {}
-
 if "mensagens" not in st.session_state: st.session_state.mensagens = []
 if "treino_ativo" not in st.session_state: st.session_state.treino_ativo = False
-if "historico_cargas" not in st.session_state: st.session_state.historico_cargas = pd.DataFrame(columns=["Data", "Exercício", "Carga (kg)", "Tipo"])
-if "historico_tempos" not in st.session_state: st.session_state.historico_tempos = pd.DataFrame(columns=["Data", "Prova", "Tempo (TXT)"])
 
-# ==========================================
-# 4. LIGAÇÃO À IA
-# ==========================================
+# LIGAÇÃO À IA
 try:
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 except Exception:
     pass 
 
 # ==========================================
-# 5. ECRÃ DE LOGIN
+# 4. ECRÃ DE LOGIN (VERIFICAÇÃO NA BASE DE DADOS)
 # ==========================================
 if not st.session_state.logged_in:
-    st.image("https://via.placeholder.com/800x200.png?text=STUDIO+AI+-+ELITE+HYROX", use_column_width=True)
+    st.image("https://via.placeholder.com/800x200.png?text=STUDIO+AI+-+ELITE+DB", use_column_width=True)
     st.markdown("<br><br>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -84,39 +76,41 @@ if not st.session_state.logged_in:
         st.markdown('<div class="premium-box">', unsafe_allow_html=True)
         st.markdown("<h3 style='text-align: center;'>Acesso Reservado</h3>", unsafe_allow_html=True)
         
-        user_input = st.text_input("Nome de Utilizador")
+        user_input = st.text_input("Nome de Utilizador").lower().strip()
         pwd_input = st.text_input("Password", type="password")
         
         if st.button("Entrar na App"):
-            if user_input in USERS_DB and USERS_DB[user_input]["pwd"] == pwd_input:
+            # VAI AO SUPABASE VERIFICAR SE O USER EXISTE
+            res = supabase.table("app_users").select("*").eq("username", user_input).eq("pwd", pwd_input).execute()
+            
+            if len(res.data) > 0:
                 st.session_state.logged_in = True
-                st.session_state.username = user_input
-                st.session_state.role = USERS_DB[user_input]["role"]
-                st.session_state.user_data = USERS_DB[user_input]
+                st.session_state.user_data = res.data[0] # Guarda todos os dados do aluno vindos da DB
                 st.rerun()
             else:
-                st.error("❌ Credenciais incorretas.")
+                st.error("❌ Credenciais incorretas ou utilizador inexistente.")
         st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
 # ==========================================
-# 6. HEADER & LOGOUT
+# 5. HEADER & LOGOUT
 # ==========================================
 st.image("https://via.placeholder.com/1200x150.png?text=STUDIO+AI", use_column_width=True)
 with st.sidebar:
     st.markdown(f"### 👤 Olá, {st.session_state.user_data['name']}")
-    st.markdown(f"**Estatuto:** {'👑 Coach / Admin' if st.session_state.role == 'coach' else '🏅 Atleta Premium'}")
+    st.markdown(f"**Estatuto:** {'👑 Coach / Admin' if st.session_state.user_data['role'] == 'coach' else '🏅 Atleta Premium'}")
     st.markdown("---")
     if st.button("Terminar Sessão"):
         st.session_state.logged_in = False
         st.session_state.mensagens = []
         st.session_state.treino_ativo = False
+        st.session_state.user_data = {}
         st.rerun()
 
 # ==============================================================================
-# 7. INTERFACE DO COACH (COM TODAS AS FERRAMENTAS RESTAURADAS)
+# 6. INTERFACE DO COACH (100% RESTAURADA + SUPABASE)
 # ==============================================================================
-if st.session_state.role == "coach":
+if st.session_state.user_data['role'] == 'coach':
     tab_box, tab_pt, tab_chat, tab_ferramentas = st.tabs([
         "🦍 Programação Box / Hyrox", "🏋️ PT Personalizado", "💬 Chat AI", "🧮 Ferramentas Coach"
     ])
@@ -154,11 +148,19 @@ if st.session_state.role == "coach":
                         """
                         st.session_state.mensagens = [{"role": "system", "content": prompt}]
                         response = client.chat.completions.create(model="gpt-4o-mini", messages=st.session_state.mensagens)
-                        st.session_state.mensagens.append({"role": "assistant", "content": response.choices[0].message.content})
+                        plano_gerado = response.choices[0].message.content
+                        st.session_state.mensagens.append({"role": "assistant", "content": plano_gerado})
                         st.session_state.treino_ativo = True
+                        
+                        # GUARDAR NA BASE DE DADOS (LOGS)
+                        supabase.table("logs_treino").insert({
+                            "username": st.session_state.user_data['username'],
+                            "tipo_treino": "Programação Box - " + foco_box,
+                            "plano_gerado": plano_gerado
+                        }).execute()
                         st.rerun()
         else:
-            st.success("✅ Programação gerada com sucesso!")
+            st.success("✅ Programação gerada e guardada com sucesso!")
             st.markdown(st.session_state.mensagens[-1]["content"])
             if st.button("🔄 Fazer Nova Programação"):
                 st.session_state.treino_ativo = False
@@ -169,23 +171,31 @@ if st.session_state.role == "coach":
         st.markdown("### 📋 Gerador de Microciclos (PT)")
         if not st.session_state.treino_ativo:
             with st.form("form_coach_pt"):
-                lista_alunos = {k: v for k, v in USERS_DB.items() if v["role"] == "student"}
-                aluno_sel = st.selectbox("🗂️ Selecionar Aluno:", ["Aluno Externo (Novo)"] + [v["name"] for k, v in lista_alunos.items()])
+                # Vai buscar a lista de alunos REAIS à base de dados
+                alunos_db = supabase.table("app_users").select("*").eq("role", "student").execute()
+                nomes_db = [a['name'] for a in alunos_db.data]
+                
+                aluno_sel = st.selectbox("🗂️ Selecionar Aluno da BD:", ["Aluno Externo (Novo)"] + nomes_db)
                 
                 obj_default = ""
                 lesao_default = ""
+                nivel_default = "Intermédio"
+                username_aluno_selecionado = ""
+                
                 if aluno_sel != "Aluno Externo (Novo)":
-                    for k, v in lista_alunos.items():
-                        if v["name"] == aluno_sel:
-                            obj_default = v["obj"]
-                            lesao_default = v["lesoes"]
+                    for a in alunos_db.data:
+                        if a["name"] == aluno_sel:
+                            obj_default = a["obj"]
+                            lesao_default = a["lesoes"]
+                            nivel_default = a["nivel"] if a["nivel"] else "Intermédio"
+                            username_aluno_selecionado = a["username"]
                 
                 col1, col2 = st.columns(2)
                 with col1:
                     objetivo = st.text_input("Objetivo:", value=obj_default)
                     split = st.selectbox("Divisão (Split):", ["1 Treino Único", "3x (Fullbody)", "4x (Upper/Lower)", "Atleta Híbrido (Força + Corrida)"])
                 with col2:
-                    nivel = st.selectbox("Nível:", ["Iniciante", "Intermédio", "Avançado"])
+                    nivel = st.selectbox("Nível:", ["Iniciante", "Intermédio", "Avançado"], index=["Iniciante", "Intermédio", "Avançado"].index(nivel_default))
                     duracao = st.slider("Duração por treino (min):", 30, 120, 60)
                 
                 lesoes = st.text_area("Restrições:", value=lesao_default)
@@ -199,8 +209,18 @@ if st.session_state.role == "coach":
                         """
                         st.session_state.mensagens = [{"role": "system", "content": prompt}]
                         response = client.chat.completions.create(model="gpt-4o-mini", messages=st.session_state.mensagens)
-                        st.session_state.mensagens.append({"role": "assistant", "content": response.choices[0].message.content})
+                        plano_gerado = response.choices[0].message.content
+                        st.session_state.mensagens.append({"role": "assistant", "content": plano_gerado})
                         st.session_state.treino_ativo = True
+                        
+                        # Guardar no perfil do aluno na BD, se for aluno registado
+                        if username_aluno_selecionado:
+                            supabase.table("logs_treino").insert({
+                                "username": username_aluno_selecionado,
+                                "tipo_treino": "Microciclo PT - " + split,
+                                "plano_gerado": plano_gerado
+                            }).execute()
+                            
                         st.rerun()
         else:
             st.markdown(st.session_state.mensagens[-1]["content"])
@@ -223,7 +243,6 @@ if st.session_state.role == "coach":
                 st.markdown(response.choices[0].message.content)
             st.session_state.mensagens.append({"role": "assistant", "content": response.choices[0].message.content})
 
-    # RESTAURADO A 100%: Ferramentas do Coach
     with tab_ferramentas:
         col_calc, col_graph = st.columns([1, 1.2])
         with col_calc:
@@ -234,123 +253,19 @@ if st.session_state.role == "coach":
             st.table(pd.DataFrame({"%": [f"{p}%" for p in percentagens], "Carga": [f"{rm_valor * (p/100):.1f} kg" for p in percentagens]}))
             st.markdown('</div>', unsafe_allow_html=True)
         with col_graph:
-            st.markdown("### 📈 Diário de Recordes (Coach Test)")
-            ex = st.text_input("Exercício (Ex: Back Squat):")
-            carga = st.number_input("Carga (kg):", min_value=0.0, step=1.0)
-            if st.button("💾 Guardar PR Teste"):
-                novo = pd.DataFrame([{"Data": datetime.now().strftime("%d/%m"), "Exercício": ex, "Carga": carga, "Tipo": "Peso"}])
-                st.session_state.historico_cargas = pd.concat([st.session_state.historico_cargas, novo], ignore_index=True)
-                st.success("Guardado!")
-            if not st.session_state.historico_cargas.empty:
-                filtro = st.selectbox("Ver evolução:", st.session_state.historico_cargas["Exercício"].unique())
-                st.line_chart(st.session_state.historico_cargas[st.session_state.historico_cargas["Exercício"] == filtro].set_index("Data")["Carga"])
+            st.markdown("### 📋 Alunos na Base de Dados")
+            alunos_res = supabase.table("app_users").select("*").eq("role", "student").execute()
+            if alunos_res.data:
+                df_alunos = pd.DataFrame(alunos_res.data)
+                st.dataframe(df_alunos[["name", "username", "obj", "nivel"]], use_container_width=True)
 
 # ==============================================================================
-# 8. INTERFACE DO ALUNO (O NOVO ATLETA HÍBRIDO + GRÁFICOS RESTAURADOS)
+# 7. INTERFACE DO ALUNO (HÍBRIDO + DIÁRIO LIGADO AO SUPABASE)
 # ==============================================================================
-elif st.session_state.role == "student":
+elif st.session_state.user_data['role'] == 'student':
     tab_treino, tab_chat, tab_diario = st.tabs(["⚡ O Meu Treino", "💬 Coach Virtual", "📈 Diário & Calculadoras"])
     
     with tab_treino:
         st.markdown(f"### Esmaga o dia, {st.session_state.user_data['name'].split()[0]}! 🔥")
         
-        if not st.session_state.treino_ativo:
-            st.markdown('<div class="premium-box">', unsafe_allow_html=True)
-            st.write(f"🎯 **Objetivo:** {st.session_state.user_data['obj']} | 🛡️ **Atenção:** {st.session_state.user_data['lesoes']}")
-            
-            tipo_treino = st.radio("O que é o menu de hoje?", [
-                "🏋️ Musculação / Estúdio", "🦍 CrossFit (WOD)", "🎿 Hyrox (Estações + Corrida)", "🏃 Corrida / Endurance Pura"
-            ])
-            tempo = st.slider("Quanto tempo tens para treinar hoje (min)?", 20, 120, 60)
-            
-            foco_especifico = ""
-            if tipo_treino == "🏋️ Musculação / Estúdio":
-                foco_especifico = st.selectbox("Qual o foco?", ["Treino Completo (Fullbody)", "Membros Superiores", "Membros Inferiores", "Core e Acessórios"])
-            elif tipo_treino == "🎿 Hyrox (Estações + Corrida)":
-                foco_especifico = st.selectbox("Foco Hyrox:", ["Simulação Completa", "Força Pura nas Estações", "Corrida Comprometida"])
-            elif tipo_treino == "🏃 Corrida / Endurance Pura":
-                foco_especifico = st.selectbox("Foco da Corrida:", ["Recuperação Ativa / Zona 2", "Intervalos / VO2 Max", "Tempo Run"])
-            
-            if st.button("🔥 Gerar o meu Treino de Hoje"):
-                with st.spinner("A ligar os motores..."):
-                    base_prompt = f"És um PT. Cliente: {st.session_state.user_data['name']}. Nível: {st.session_state.user_data['nivel']}. Lesões a proteger: {st.session_state.user_data['lesoes']}. Tempo: {tempo} min."
-                    if tipo_treino == "🏋️ Musculação / Estúdio":
-                        prompt = f"{base_prompt} Cria um treino de MUSCULAÇÃO focado em {foco_especifico}. Dá estrutura limpa e links YouTube."
-                    elif tipo_treino == "🦍 CrossFit (WOD)":
-                        prompt = f"{base_prompt} Cria um treino de CROSSFIT. Usa termos oficiais do CrossFit."
-                    elif tipo_treino == "🎿 Hyrox (Estações + Corrida)":
-                        prompt = f"{base_prompt} Cria um treino de HYROX focado em {foco_especifico}. Integra 'compromised running' e as estações oficiais."
-                    else:
-                        prompt = f"{base_prompt} Cria um treino de CORRIDA focado em {foco_especifico}. Sugere Zonas Cardíacas."
-                        
-                    st.session_state.mensagens = [{"role": "system", "content": prompt}]
-                    response = client.chat.completions.create(model="gpt-4o-mini", messages=st.session_state.mensagens)
-                    st.session_state.mensagens.append({"role": "assistant", "content": response.choices[0].message.content})
-                    st.session_state.treino_ativo = True
-                    st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(st.session_state.mensagens[-1]["content"])
-            st.markdown("---")
-            if st.button("✅ Terminar e Registar"):
-                st.balloons()
-                st.session_state.treino_ativo = False
-                st.session_state.mensagens = []
-                st.rerun()
-
-    with tab_chat:
-        st.markdown("### 💬 Dúvidas no Treino?")
-        if len(st.session_state.mensagens) == 0:
-            st.info("Gera o teu treino primeiro.")
-        else:
-            for msg in st.session_state.mensagens:
-                if msg["role"] != "system":
-                    with st.chat_message(msg["role"]): st.markdown(msg["content"])
-            chat_input = st.chat_input("Pede ajustes...")
-            if chat_input:
-                st.session_state.mensagens.append({"role": "user", "content": chat_input})
-                with st.chat_message("user"): st.markdown(chat_input)
-                with st.chat_message("assistant"):
-                    response = client.chat.completions.create(model="gpt-4o-mini", messages=st.session_state.mensagens)
-                    st.markdown(response.choices[0].message.content)
-                st.session_state.mensagens.append({"role": "assistant", "content": response.choices[0].message.content})
-
-    # RESTAURADO A 100%: Diário Inteligente do Aluno (Pesos com gráfico + Tempos em Tabela)
-    with tab_diario:
-        st.markdown("### 📈 Diário: PRs e Tempos")
-        
-        # 1. Calculadora e Registo de Peso (Com o Gráfico de volta!)
-        colA, colB = st.columns([1, 1.2])
-        with colA:
-            st.markdown("#### 🧮 Calculadora 1RM")
-            rm_val = st.number_input("O teu 1RM (kg):", min_value=0.0, step=2.5, value=100.0, key="rm_student")
-            perc = [50, 60, 70, 75, 80, 85, 90, 95]
-            st.table(pd.DataFrame({"%": [f"{p}%" for p in perc], "Carga": [f"{rm_val * (p/100):.1f} kg" for p in perc]}))
-            
-        with colB:
-            st.markdown("#### 🥇 Guardar Peso Levantado")
-            ex_peso = st.text_input("Exercício (LPO / Musculação):")
-            carga_peso = st.number_input("Peso (kg):", min_value=0.0, step=1.0, key="carga_student")
-            if st.button("💾 Registar Peso"):
-                novo = pd.DataFrame([{"Data": datetime.now().strftime("%d/%m"), "Exercício": ex_peso, "Carga": carga_peso, "Tipo": "Peso"}])
-                st.session_state.historico_cargas = pd.concat([st.session_state.historico_cargas, novo], ignore_index=True)
-                st.success("Belo PR!")
-            if not st.session_state.historico_cargas.empty:
-                filtro = st.selectbox("Gráfico de Progresso:", st.session_state.historico_cargas["Exercício"].unique())
-                st.line_chart(st.session_state.historico_cargas[st.session_state.historico_cargas["Exercício"] == filtro].set_index("Data")["Carga"])
-
-        st.markdown("---")
-        
-        # 2. Registo de Tempos (Endurance / Hyrox) em formato tabela
-        st.markdown("#### ⏱️ Guardar Tempo de Prova (Corrida / Hyrox)")
-        colC, colD = st.columns([1, 1.2])
-        with colC:
-            prova = st.text_input("Nome da Prova / Benchmark:")
-            tempo_txt = st.text_input("Tempo (Ex: 22m30s ou 1h15m):")
-            if st.button("⏱️ Registar Tempo"):
-                novo_t = pd.DataFrame([{"Data": datetime.now().strftime("%d/%m"), "Prova": prova, "Tempo (TXT)": tempo_txt}])
-                st.session_state.historico_tempos = pd.concat([st.session_state.historico_tempos, novo_t], ignore_index=True)
-                st.success("Tempo guardado!")
-        with colD:
-            if not st.session_state.historico_tempos.empty:
-                st.dataframe(st.session_state.historico_tempos, use_container_width=True)
+        if not st.session_state.treino_ativo
