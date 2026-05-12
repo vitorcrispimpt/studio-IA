@@ -179,7 +179,7 @@ if st.session_state.user_data['role'] == 'coach':
         "🦍 CrossFit", "🎿 Hyrox", "🏃 Corrida", "🏋️ Alunos PT", "💬 Chat Coach", "📊 Ferramentas & BD"
     ])
     
-    # --- 7.1 CROSSFIT (COM METODOLOGIA) ---
+    # --- 7.1 CROSSFIT (COM LÓGICA DE CALENDÁRIO CORRIGIDA) ---
     with tab_cf:
         st.markdown("### 🦍 Programação da Box (CrossFit)")
         if not st.session_state.treino_ativo:
@@ -191,7 +191,7 @@ if st.session_state.user_data['role'] == 'coach':
                 c1, c2 = st.columns(2)
                 with c1:
                     modo = st.selectbox("O que queres planear?", ["Treino de Hoje", "1 Semana Completa", "1 Mês (Macro)"])
-                    dia_semana = st.selectbox("Se for o Treino de Hoje, que dia é?", ["Segunda", "Terça", "Quarta", "Quinta (Partner)", "Sexta", "Sábado (Partner)"])
+                    dia_semana = st.selectbox("Se for apenas o 'Treino de Hoje', que dia é?", ["Segunda", "Terça", "Quarta", "Quinta (Partner)", "Sexta", "Sábado (Partner)"])
                 with c2:
                     foco_manual = st.selectbox("Forçar Foco (opcional):", ["Automático", "Weightlifting", "Ginástica Clássica", "WOD Longo", "Skill Técnica"])
                 
@@ -199,13 +199,27 @@ if st.session_state.user_data['role'] == 'coach':
                 regras_cf = st.text_input("Regras Extras / Avisos:")
                 
                 if st.form_submit_button("Gerar Programação Metódica"):
-                    with st.spinner("A aplicar o Manifesto Studio AI..."):
+                    with st.spinner("A aplicar o Manifesto Studio AI... (Pode demorar uns segundos se for um mês inteiro)"):
                         p_hist = f"Histórico: {hist_cf}." if hist_cf else ""
+                        
+                        # CORREÇÃO DA LÓGICA DE CALENDÁRIO:
+                        if modo == "Treino de Hoje":
+                            info_calendario = f"Instrução: Prepara APENAS o treino para o dia {dia_semana}."
+                        elif modo == "1 Semana Completa":
+                            info_calendario = "Instrução: Prepara UMA SEMANA COMPLETA. Apresenta a programação detalhada para todos os dias, de Segunda-feira a Sábado."
+                        else: # 1 Mês (Macro)
+                            info_calendario = "Instrução: Prepara UM MÊS INTEIRO (4 semanas completas). Detalha a programação dia a dia, de Segunda a Sábado, para cada uma das 4 semanas."
+
                         prompt = f"""
                         {METODOLOGIA_CF}
-                        PEDIDO ATUAL: {modo}. Dia: {dia_semana}. Foco pedido: {foco_manual}.
-                        {p_hist} Regras extras: {regras_cf}.
-                        Gera o plano seguindo estritamente as regras acima.
+                        
+                        PEDIDO ATUAL: {modo}.
+                        {info_calendario}
+                        Foco pedido (se aplicável): {foco_manual}.
+                        {p_hist} 
+                        Regras extras: {regras_cf}.
+                        
+                        Gera o plano seguindo estritamente as regras de estruturação e de proibição de repetição.
                         """
                         res = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": prompt}])
                         st.session_state.mensagens = [{"role": "assistant", "content": res.choices[0].message.content}]
