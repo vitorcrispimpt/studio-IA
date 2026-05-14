@@ -49,7 +49,7 @@ st.markdown("""
 # ==========================================
 METODOLOGIA_CF = """
 === MANIFESTO DO HEAD COACH (STUDIO AI) ===
-És o Head Coach do Studio AI. Deves programar seguindo rigorosamente estas 6 REGRAS DE OURO:
+És o Head Coach do Studio AI. Deves programar seguindo rigorosamente estas 7 REGRAS DE OURO:
 
 1. ESTRUTURA SEMANAL E DIÁRIA (Aulas de 60 min, Segunda a Sábado):
    - QUINTA-FEIRA: Partner WOD (30-35 min). Apenas WOD (sem força/técnica prévia).
@@ -73,8 +73,15 @@ METODOLOGIA_CF = """
    - PROIBIÇÃO ABSOLUTA: Evitar repetir os mesmos exercícios ou padrões de movimento idênticos na mesma semana.
    - Repetir padrões a longo prazo, medir progresso, reciclar estímulos e mudar o contexto sem perder a direção.
 
+7. AUDITORIA DE VOLUME SEMANAL (OBRIGATÓRIO):
+   No final de CADA semana planeada, deves obrigatoriamente criar uma secção chamada "📊 ANÁLISE DE VOLUME DA SEMANA" onde calculas e apresentas:
+   - Volume por Padrões: Estimativa de reps totais da semana em Push, Pull, Squat e Hinge.
+   - Movimentos Críticos: Reps totais de LPO e movimentos de Ginástica complexos.
+   - Zonas de Esforço: Tempo estimado (minutos) que os alunos vão passar em Zona 2, Threshold e Redline/VO2 Max, bem como a distância total estimada de Corrida/Ergs.
+
 FORMATO DE SAÍDA EXIGIDO:
-Apresentar Warm-up, Parte Principal (se aplicável), WOD (Versões RX e Scaled) e Notas de Pacing para o Coach.
+Para CADA DIA: Apresentar Warm-up, Parte Principal (se aplicável), WOD (Versões RX e Scaled) e Notas de Pacing para o Coach.
+Para o FINAL DA SEMANA: Apresentar a secção "📊 ANÁLISE DE VOLUME DA SEMANA".
 """
 
 BENCHMARKS = {
@@ -199,12 +206,12 @@ if st.session_state.user_data['role'] == 'coach':
                 regras_cf = st.text_input("Regras Extras / Avisos:")
                 
                 if st.form_submit_button("Gerar Programação Metódica"):
-                    with st.spinner("A aplicar o Manifesto Studio AI... (Pode demorar uns segundos se for um mês inteiro)"):
+                    with st.spinner("A aplicar o Manifesto Studio AI e a auditar volume..."):
                         p_hist = f"Histórico: {hist_cf}." if hist_cf else ""
                         
-                        # CORREÇÃO DA LÓGICA DE CALENDÁRIO:
+                        # LÓGICA DE CALENDÁRIO
                         if modo == "Treino de Hoje":
-                            info_calendario = f"Instrução: Prepara APENAS o treino para o dia {dia_semana}."
+                            info_calendario = f"Instrução: Prepara APENAS o treino para o dia {dia_semana}. Ignora a análise de volume semanal, pois é apenas um dia."
                         elif modo == "1 Semana Completa":
                             info_calendario = "Instrução: Prepara UMA SEMANA COMPLETA. Apresenta a programação detalhada para todos os dias, de Segunda-feira a Sábado."
                         else: # 1 Mês (Macro)
