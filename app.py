@@ -73,8 +73,9 @@ METODOLOGIA_CF = """
    - PROIBIÇÃO ABSOLUTA: Evitar repetir os mesmos exercícios ou padrões de movimento idênticos na mesma semana.
    - Repetir padrões a longo prazo, medir progresso, reciclar estímulos e mudar o contexto sem perder a direção.
 
-7. AUDITORIA DE VOLUME SEMANAL (OBRIGATÓRIO):
+7. AUDITORIA DE VOLUME SEMANAL E TONELAGEM (OBRIGATÓRIO):
    No final de CADA semana planeada, deves obrigatoriamente criar uma secção chamada "📊 ANÁLISE DE VOLUME DA SEMANA" onde calculas e apresentas:
+   - Tonelagem (Carga Total Estimada): Calcula o peso total aproximado levantado na semana (multiplicando as reps estimadas pela carga média de RX na Força e nos WODs). Apresenta o valor em Toneladas (Ex: 15 Toneladas).
    - Volume por Padrões: Estimativa de reps totais da semana em Push, Pull, Squat e Hinge.
    - Movimentos Críticos: Reps totais de LPO e movimentos de Ginástica complexos.
    - Zonas de Esforço: Tempo estimado (minutos) que os alunos vão passar em Zona 2, Threshold e Redline/VO2 Max, bem como a distância total estimada de Corrida/Ergs.
@@ -186,7 +187,7 @@ if st.session_state.user_data['role'] == 'coach':
         "🦍 CrossFit", "🎿 Hyrox", "🏃 Corrida", "🏋️ Alunos PT", "💬 Chat Coach", "📊 Ferramentas & BD"
     ])
     
-    # --- 7.1 CROSSFIT (COM LÓGICA DE CALENDÁRIO CORRIGIDA) ---
+    # --- 7.1 CROSSFIT ---
     with tab_cf:
         st.markdown("### 🦍 Programação da Box (CrossFit)")
         if not st.session_state.treino_ativo:
@@ -206,7 +207,7 @@ if st.session_state.user_data['role'] == 'coach':
                 regras_cf = st.text_input("Regras Extras / Avisos:")
                 
                 if st.form_submit_button("Gerar Programação Metódica"):
-                    with st.spinner("A aplicar o Manifesto Studio AI e a auditar volume..."):
+                    with st.spinner("A aplicar o Manifesto Studio AI e a auditar volume e tonelagem..."):
                         p_hist = f"Histórico: {hist_cf}." if hist_cf else ""
                         
                         # LÓGICA DE CALENDÁRIO
